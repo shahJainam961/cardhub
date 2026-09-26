@@ -1,0 +1,69 @@
+import { expect, type Locator, type Page } from "@playwright/test";
+
+/** Clicks if the element becomes clickable soon; bots can change the table at any moment. */
+async function tryClick(locator: Locator): Promise<boolean> {
+  try {
+    await locator.click({ timeout: 1_000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Plays for every human on this device until the game ends: handles handoffs, pickers,
+ * calls UNO, plays the first playable card, otherwise draws or passes.
+ */
+export async function playUntilGameOver(page: Page, maxSteps = 1_500): Promise<void> {
+  const gameOver = page.getByRole("dialog", { name: /wins!$/ });
+  for (let step = 0; step < maxSteps; step++) {
+    if (await gameOver.isVisible()) return;
+
+    const showHand = page.getByRole("button", { name: /show my hand/ });
+    if (await showHand.isVisible()) {
+      await tryClick(showHand);
+      continue;
+    }
+    const colorPicker = page.getByRole("dialog", { name: "Choose a color" });
+    if (await colorPicker.isVisible()) {
+      await tryClick(colorPicker.getByRole("button", { name: "red" }));
+      continue;
+    }
+    const swapPicker = page.getByRole("dialog", { name: "Swap hands with" });
+    if (await swapPicker.isVisible()) {
+      await tryClick(swapPicker.getByRole("button").first());
+      continue;
+    }
+
+    const playable = page.locator('[data-testid="hand-card"][data-playable="true"]');
+    if ((await playable.count()) > 0) {
+      const unoButton = page.getByRole("button", { name: "UNO!" });
+      if (
+        (await unoButton.isVisible()) &&
+        (await unoButton.getAttribute("aria-pressed")) === "false"
+      ) {
+        await tryClick(unoButton);
+      }
+      await tryClick(playable.first());
+      continue;
+    }
+    const draw = page.getByRole("button", { name: /^Draw/ });
+    if (await draw.isEnabled()) {
+      await tryClick(draw);
+      continue;
+    }
+    const pass = page.getByRole("button", { name: "Pass" });
+    if (await pass.isVisible()) {
+      await tryClick(pass);
+      continue;
+    }
+    await page.waitForTimeout(25);
+  }
+  throw new Error(`Game did not finish within ${maxSteps} steps`);
+}
+
+export async function expectGameOver(page: Page): Promise<void> {
+  const gameOver = page.getByRole("dialog", { name: /wins!$/ });
+  await expect(gameOver).toBeVisible();
+  await expect(gameOver).toContainText(/Scored \d+ points/);
+}

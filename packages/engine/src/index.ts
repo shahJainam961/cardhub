@@ -1,3 +1,4 @@
+export * from "./core/clone";
 export * from "./core/play";
 export * from "./core/rng";
 export type * from "./core/types";

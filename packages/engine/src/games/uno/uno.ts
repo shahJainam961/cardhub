@@ -1,3 +1,4 @@
+import { deepClone } from "../../core/clone";
 import { createRng, type Rng } from "../../core/rng";
 import type { GameDefinition, PlayerId, ValidationResult } from "../../core/types";
 import {
@@ -370,7 +371,7 @@ export const uno: GameDefinition<UnoState, UnoMove, UnoView, UnoOptions> = {
   validateMove,
 
   applyMove(state, player, move) {
-    const s = structuredClone(state);
+    const s = deepClone(state);
     const rng = createRng(s.rngState);
     switch (move.type) {
       case "draw":
@@ -391,7 +392,7 @@ export const uno: GameDefinition<UnoState, UnoMove, UnoView, UnoOptions> = {
     const isMe = player !== null && player === currentPlayer(s);
     return {
       me: player,
-      hand: player && s.hands[player] ? structuredClone(s.hands[player]) : [],
+      hand: player && s.hands[player] ? deepClone(s.hands[player]) : [],
       players: s.players.map((id) => ({ id, cardCount: handOf(s, id).length })),
       topCard: { ...topCard(s) },
       currentColor: s.currentColor,

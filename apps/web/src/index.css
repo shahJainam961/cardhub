@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  --color-felt-700: #0f6b4d;
+  --color-felt-800: #0b4a36;
+  --color-felt-900: #062a1f;
+  --spacing-22: 5.5rem;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at 50% 35%, var(--color-felt-700), var(--color-felt-900) 75%);
+  background-attachment: fixed;
+  color: white;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Keeps content clear of notches and home indicators once wrapped with Capacitor. */
+.safe-area {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}

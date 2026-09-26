@@ -1,0 +1,15 @@
+{
+  "name": "@cardhub/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "End-to-end tests that drive the real app in a browser",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.19.0"
+  }
+}

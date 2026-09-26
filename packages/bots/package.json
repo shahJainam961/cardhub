@@ -1,0 +1,16 @@
+{
+  "name": "@cardhub/bots",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Computer opponents that play from the same player view a human sees",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cardhub/engine": "workspace:*"
+  }
+}
