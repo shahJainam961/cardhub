@@ -13,8 +13,8 @@ services:
     # No pnpm at runtime: run the TypeScript entry point with tsx directly.
     startCommand: cd apps/server && ./node_modules/.bin/tsx src/index.ts
     healthCheckPath: /
-    # Deploy only after the GitHub CI checks pass on main.
-    autoDeployTrigger: checksPass
+    # Deploys are triggered by the CI "deploy" job (via a deploy hook) after all tests pass.
+    autoDeployTrigger: "off"
     envVars:
       - key: NODE_VERSION
         value: "24"
