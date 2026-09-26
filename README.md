@@ -3,6 +3,8 @@
 A multi-game card platform: play locally (pass-and-play or against bots) or online with friends
 by room code. Web first; Android and iOS later via Capacitor.
 
+**Live:** https://cardhub-aaq.pages.dev
+
 Games: **Uno** (with house rules: stacking, 7-0, jump-in, draw until playable). Monopoly Deal
 and Chess are coming.
 
@@ -41,7 +43,9 @@ pnpm test:e2e   # full browser tests on desktop and mobile (needs `pnpm db:start
 pnpm lint && pnpm typecheck && pnpm format:check
 ```
 
-CI runs all of the above on every push and pull request (`.github/workflows/ci.yml`).
+CI runs all of the above on every push and pull request (`.github/workflows/ci.yml`). Pushes to
+`main` that pass every test are deployed (website to Cloudflare Pages, game server to Render),
+then smoke-tested on the live site. The smoke tests also run daily (`.github/workflows/smoke.yml`).
 
 ## Useful commands
 

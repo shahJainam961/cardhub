@@ -12,7 +12,8 @@ permissions:
   contents: read
 
 env:
-  E2E_BASE_URL: https://cardhub.pages.dev
+  # "cardhub.pages.dev" belongs to someone else; Cloudflare assigned this address to our project.
+  E2E_BASE_URL: https://cardhub-aaq.pages.dev
 
 jobs:
   smoke:
