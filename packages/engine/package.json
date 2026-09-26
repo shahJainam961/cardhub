@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "fast-check": "^4.10.2"
+  },
+  "dependencies": {
+    "chess.js": "1.4.0"
   }
 }
