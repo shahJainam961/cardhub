@@ -31,13 +31,23 @@ function audio(): AudioContext | null {
     globalThis.AudioContext ??
     (globalThis as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
-  ctx = new Ctor();
+  ctx = new Ctor({ latencyHint: "interactive" });
+  // Everything goes through a compressor, so effects can be loud without clipping on phone speakers.
+  const master = ctx.createDynamicsCompressor();
+  master.threshold.value = -18;
+  master.knee.value = 12;
+  master.ratio.value = 6;
+  master.attack.value = 0.002;
+  master.release.value = 0.15;
+  const makeUp = ctx.createGain();
+  makeUp.gain.value = 1.6;
+  master.connect(makeUp).connect(ctx.destination);
   sfxBus = ctx.createGain();
-  sfxBus.gain.value = 0.35;
-  sfxBus.connect(ctx.destination);
+  sfxBus.gain.value = 1;
+  sfxBus.connect(master);
   musicBus = ctx.createGain();
-  musicBus.gain.value = 0.08;
-  musicBus.connect(ctx.destination);
+  musicBus.gain.value = 0.22;
+  musicBus.connect(master);
   return ctx;
 }
 
@@ -160,6 +170,8 @@ export function play(name: SoundName): void {
   if (!useAudioSettings.getState().sound) return;
   const c = audio();
   if (c && c.state === "running") SOUNDS[name]();
+  // Browsers suspend idle audio (phones especially): wake it and play as soon as it's back.
+  else if (c && c.state === "suspended") void c.resume().then(() => SOUNDS[name]());
   const pattern = VIBRATION[name];
   if (pattern) navigator.vibrate?.(pattern);
 }

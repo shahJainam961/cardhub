@@ -95,6 +95,17 @@ describe("DealTable", () => {
     expect(onMove).toHaveBeenCalledWith({ type: "justSayNo", cardId: "jsn" });
   });
 
+  it("opens an opponent's full table from their seat", async () => {
+    renderTable((s) => {
+      s.tables.bot!.bank = [money("b1", 2), money("b2", 3)];
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Bot's table" }));
+    const dialog = screen.getByRole("dialog", { name: "Bot's table" });
+    expect(within(dialog).getByTestId("bank-total")).toHaveTextContent("Bank 5M");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog", { name: "Bot's table" })).not.toBeInTheDocument();
+  });
+
   it("makes you pick exactly the cards to discard", async () => {
     const onMove = renderTable((s) => {
       s.hands.me = Array.from({ length: 9 }, (_, i) => money(`c${i}`, 1));

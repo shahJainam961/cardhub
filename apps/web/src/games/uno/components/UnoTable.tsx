@@ -19,11 +19,15 @@ import {
   type UnoView,
 } from "@cardhub/engine";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
-import { useCallback, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { AudioToggles } from "../../../components/AudioToggles";
 import { Avatar } from "../../../components/Avatar";
 import { Button } from "../../../components/Button";
 import { Overlay } from "../../../components/Overlay";
+import { RoundTable } from "../../../components/RoundTable";
+import { useElementSize, useMediaQuery } from "../../../hooks/useElementSize";
+import { fanLayout } from "../../../lib/fan";
+import { trustedPointerListeners } from "../../../lib/dnd";
 import { play } from "../../../audio/sound";
 import { useUnoEffects } from "../useUnoEffects";
 import { UNO_HEX, UnoCardBack, UnoCardView } from "./UnoCardView";
@@ -80,6 +84,7 @@ function tiltOf(id: string): number {
 }
 
 const DISCARD_ID = "discard-pile";
+const COMPACT_QUERY = "(max-width: 639px), (max-height: 760px)";
 /** Width of a hand card (the "md" size) and the strip of it that must stay visible. */
 const CARD_WIDTH = 80;
 const MIN_VISIBLE = 26;
@@ -104,6 +109,9 @@ export function UnoTable({
   // A short press-and-move starts a drag; a tap still plays the card.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   useUnoEffects(view);
+  // Phones and short screens: smaller piles so the whole table fits without scrolling.
+  const compact = useMediaQuery(COMPACT_QUERY);
+  const pileSize = compact ? "md" : "lg";
 
   const viewer = view.me;
   const current = view.currentPlayer;
@@ -147,7 +155,17 @@ export function UnoTable({
   else if (viewer === current) status = "Your turn";
   else status = `${nameOf(current)}'s turn`;
 
-  const opponents = view.players.filter((p) => p.id !== viewer);
+  // Seats in turn order, starting with whoever plays after the viewer.
+  const seatStart = Math.max(
+    0,
+    view.players.findIndex((p) => p.id === viewer),
+  );
+  const opponents = [
+    ...view.players.slice(seatStart + 1),
+    ...view.players.slice(0, seatStart),
+  ].filter((p) => p.id !== viewer);
+  // Big tables get smaller seats so everyone fits around the rim.
+  const dense = opponents.length > (compact ? 4 : 6);
   const hand = sortHand(view.hand);
 
   return (
@@ -158,16 +176,16 @@ export function UnoTable({
       onDragCancel={() => setDragging(null)}
     >
       <LayoutGroup>
-        <main className="safe-area mx-auto flex min-h-full max-w-5xl flex-col gap-3 overflow-x-hidden px-3 py-3">
+        <main className="safe-area mx-auto flex h-dvh max-w-5xl flex-col gap-1 overflow-hidden px-2 sm:gap-2 sm:px-3">
           <header className="flex items-center justify-between gap-2">
-            <Button variant="ghost" className="!min-h-11 !px-4" onClick={onLeave}>
+            <Button variant="ghost" className="!min-h-11 shrink-0 !px-4" onClick={onLeave}>
               Leave
             </Button>
             <motion.p
               key={status}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className={`rounded-full border-[2.5px] border-ink px-4 py-1.5 text-center font-display text-lg font-semibold shadow-[2px_3px_0_var(--color-ink)] ${
+              className={`min-w-0 truncate rounded-full border-[2.5px] border-ink px-3 py-1 text-center font-display text-base font-semibold shadow-[2px_3px_0_var(--color-ink)] sm:px-4 sm:py-1.5 sm:text-lg ${
                 viewer === current && !view.winner ? "bg-sunny" : "bg-white"
               }`}
               role="status"
@@ -178,79 +196,42 @@ export function UnoTable({
             <AudioToggles />
           </header>
 
-          <ul
-            className="flex justify-center gap-3 overflow-x-auto px-1 pt-2 pb-3"
-            aria-label="Players"
-          >
-            {opponents.map((p) => {
-              const player = playerOf(p.id);
-              const isTurn = p.id === current && !view.winner;
-              return (
-                <li
-                  key={p.id}
-                  className={`relative flex min-w-24 shrink-0 flex-col items-center gap-1 rounded-3xl border-[2.5px] px-3 pt-2 pb-2 transition ${
-                    isTurn
-                      ? "border-ink bg-sunny shadow-[3px_4px_0_var(--color-ink)]"
-                      : "border-transparent bg-white/85"
-                  } ${player?.connected === false ? "opacity-60" : ""}`}
+          <RoundTable
+            felt={["#3fe0b0", "#10956d"]}
+            dense={dense}
+            seats={opponents.map((p) => ({
+              id: p.id,
+              content: (
+                <OpponentSeat
+                  name={nameOf(p.id)}
+                  isBot={playerOf(p.id)?.isBot ?? false}
+                  connected={playerOf(p.id)?.connected ?? true}
+                  cardCount={p.cardCount}
+                  isTurn={p.id === current && !view.winner}
+                  dense={dense}
+                />
+              ),
+            }))}
+            mySeat={
+              viewer && (
+                <span
+                  className={`flex items-center gap-1.5 rounded-full border-[2.5px] border-ink py-0.5 pr-3 pl-0.5 shadow-[2px_3px_0_var(--color-ink)] ${
+                    viewer === current && !view.winner ? "bg-sunny" : "bg-white"
+                  }`}
                 >
-                  <Avatar name={nameOf(p.id)} isBot={player?.isBot ?? false} active={isTurn} />
-                  <span className="max-w-24 truncate font-display font-semibold">
-                    {nameOf(p.id)}
+                  <Avatar
+                    name={nameOf(viewer)}
+                    size="sm"
+                    active={viewer === current && !view.winner}
+                  />
+                  <span className="max-w-32 truncate font-display font-semibold">
+                    {nameOf(viewer)}
                   </span>
-                  {/* A mini fan of card backs, one per card (up to a handful). */}
-                  <span className="flex h-10 items-end pl-3" aria-hidden>
-                    {Array.from({ length: Math.min(p.cardCount, 7) }, (_, i) => (
-                      <UnoCardBack
-                        key={i}
-                        size="sm"
-                        className="-ml-4 !h-9 !w-6 origin-bottom first:ml-0"
-                        style={{ rotate: (i - (Math.min(p.cardCount, 7) - 1) / 2) * 10 }}
-                      />
-                    ))}
-                  </span>
-                  <span
-                    className="text-xs font-bold text-ink/70"
-                    data-testid={`card-count-${nameOf(p.id)}`}
-                  >
-                    {p.cardCount} {p.cardCount === 1 ? "card" : "cards"}
-                    {player?.connected === false && " · reconnecting…"}
-                  </span>
-                  <AnimatePresence>
-                    {p.cardCount === 1 && (
-                      <motion.strong
-                        key="uno"
-                        className="absolute -top-3 -right-2 rounded-full border-2 border-ink bg-cherry px-2 font-display text-sm text-white shadow-[2px_2px_0_var(--color-ink)]"
-                        initial={{ scale: 0, rotate: -30 }}
-                        animate={{ scale: [0, 1.5, 1], rotate: 8 }}
-                        exit={{ scale: 0 }}
-                      >
-                        UNO!
-                      </motion.strong>
-                    )}
-                  </AnimatePresence>
-                  {isTurn && (
-                    <span
-                      className="absolute -bottom-3 flex gap-1 rounded-full border-2 border-ink bg-white px-2 py-0.5"
-                      aria-hidden
-                    >
-                      {[0, 1, 2].map((i) => (
-                        <motion.span
-                          key={i}
-                          className="size-1.5 rounded-full bg-ink"
-                          animate={{ y: [0, -3, 0] }}
-                          transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15 }}
-                        />
-                      ))}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-
-          <section className="flex flex-col items-center justify-center gap-2" aria-label="Table">
-            <div className="flex items-center gap-8">
+                </span>
+              )
+            }
+          >
+            <div className="flex items-center gap-5 sm:gap-8">
               <motion.button
                 type="button"
                 onClick={() => onMove({ type: "draw" })}
@@ -262,15 +243,17 @@ export function UnoTable({
               >
                 {/* A stack: two offset backs peeking out under the top one. */}
                 <span className="absolute top-2.5 left-3 rotate-6" aria-hidden>
-                  <UnoCardBack size="lg" />
+                  <UnoCardBack size={pileSize} />
                 </span>
                 <span className="absolute top-1 left-1.5 rotate-3" aria-hidden>
-                  <UnoCardBack size="lg" />
+                  <UnoCardBack size={pileSize} />
                 </span>
                 <span className="relative block">
                   <UnoCardBack
-                    size="lg"
-                    className={canDraw ? "ring-4 ring-sunny ring-offset-2 ring-offset-grape" : ""}
+                    size={pileSize}
+                    className={
+                      canDraw ? "ring-4 ring-sunny ring-offset-2 ring-offset-mint-dark" : ""
+                    }
                   />
                 </span>
                 <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 rounded-full border-2 border-ink bg-white px-2 text-xs font-bold">
@@ -278,13 +261,13 @@ export function UnoTable({
                 </span>
               </motion.button>
 
-              <DiscardPile view={view} highlight={dragging !== null} />
+              <DiscardPile view={view} highlight={dragging !== null} size={pileSize} />
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 font-bold">
-              <span className="flex items-center gap-2 rounded-full border-2 border-ink bg-white px-3 py-1 text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-1.5 text-xs font-bold sm:gap-2 sm:text-sm">
+              <span className="flex items-center gap-1.5 rounded-full border-2 border-ink bg-white px-2.5 py-0.5">
                 <span
-                  className="inline-block size-4 rounded-full border-2 border-ink"
+                  className="inline-block size-3.5 rounded-full border-2 border-ink"
                   style={{ background: UNO_HEX[view.currentColor] }}
                   data-testid="current-color"
                   aria-label={view.currentColor}
@@ -292,7 +275,7 @@ export function UnoTable({
                 <span className="capitalize">{view.currentColor}</span>
               </span>
               <span
-                className="flex items-center gap-1 rounded-full border-2 border-ink bg-white px-3 py-1 text-sm"
+                className="flex items-center gap-1 rounded-full border-2 border-ink bg-white px-2.5 py-0.5"
                 aria-label={view.direction === 1 ? "Clockwise" : "Counter-clockwise"}
               >
                 <motion.span
@@ -302,12 +285,14 @@ export function UnoTable({
                 >
                   {view.direction === 1 ? "↻" : "↺"}
                 </motion.span>
-                {view.direction === 1 ? "Clockwise" : "Counter"}
+                <span className="hidden sm:inline">
+                  {view.direction === 1 ? "Clockwise" : "Counter"}
+                </span>
               </span>
               <AnimatePresence>
                 {view.pendingDraw > 0 && (
                   <motion.strong
-                    className="rounded-full border-2 border-ink bg-cherry px-3 py-1 text-sm text-white"
+                    className="rounded-full border-2 border-ink bg-cherry px-2.5 py-0.5 text-white"
                     initial={{ scale: 0 }}
                     animate={{ scale: [0, 1.3, 1] }}
                     exit={{ scale: 0 }}
@@ -319,78 +304,68 @@ export function UnoTable({
             </div>
 
             <ol
-              className="min-h-10 text-center text-sm font-bold text-white [text-shadow:1px_1px_0_var(--color-ink)]"
+              className="w-full max-w-md text-center text-xs font-bold text-white [text-shadow:1px_1px_0_var(--color-ink)] sm:text-sm"
               aria-live="polite"
               data-testid="game-log"
             >
-              {log.slice(-3).map((entry, i, shown) => (
+              {log.slice(-2).map((entry, i, shown) => (
                 <li
                   key={`${moveCount}-${i}`}
-                  className={i === shown.length - 1 ? "text-base" : "opacity-75"}
+                  className={`truncate ${i === shown.length - 1 ? "" : "opacity-70"}`}
                 >
                   {entry}
                 </li>
               ))}
             </ol>
-          </section>
 
-          <section
-            aria-label="Your hand"
-            className="mt-auto flex flex-col items-center gap-1 pb-10"
-          >
-            {viewer ? (
-              <>
-                <div className="flex items-center justify-center gap-2">
-                  <Avatar
-                    name={nameOf(viewer)}
-                    size="sm"
-                    active={viewer === current && !view.winner}
-                  />
-                  <span className="font-display text-lg font-semibold text-white [text-shadow:1px_1px_0_var(--color-ink)]">
-                    {nameOf(viewer)}
-                  </span>
-                  <AnimatePresence>
-                    {view.hand.length === 2 && playable.size > 0 && (
-                      <motion.button
-                        key="uno"
-                        type="button"
-                        aria-pressed={unoCalled}
-                        className={`cursor-pointer rounded-full border-[3px] border-ink px-5 py-1.5 font-display text-xl font-bold shadow-[3px_4px_0_var(--color-ink)] ${
-                          unoCalled ? "bg-cherry text-white" : "bg-white text-cherry"
-                        }`}
-                        initial={{ scale: 0 }}
-                        animate={unoCalled ? { scale: 1, rotate: -6 } : { scale: [1, 1.12, 1] }}
-                        transition={unoCalled ? {} : { repeat: Infinity, duration: 1 }}
-                        exit={{ scale: 0, transition: { duration: 0.15, repeat: 0 } }}
-                        onClick={() => {
-                          if (!unoCalled) play("uno");
-                          setUnoCalledAt(unoCalled ? null : moveCount);
-                        }}
-                      >
-                        UNO!
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
-                  {canPass && (
-                    <Button
-                      variant="secondary"
-                      className="!min-h-10"
-                      onClick={() => onMove({ type: "pass" })}
+            {viewer && (
+              <div className="flex min-h-10 items-center gap-2">
+                <AnimatePresence>
+                  {view.hand.length === 2 && playable.size > 0 && (
+                    <motion.button
+                      key="uno"
+                      type="button"
+                      aria-pressed={unoCalled}
+                      className={`cursor-pointer rounded-full border-[3px] border-ink px-5 py-1 font-display text-xl font-bold shadow-[3px_4px_0_var(--color-ink)] ${
+                        unoCalled ? "bg-cherry text-white" : "bg-white text-cherry"
+                      }`}
+                      initial={{ scale: 0 }}
+                      animate={unoCalled ? { scale: 1, rotate: -6 } : { scale: [1, 1.12, 1] }}
+                      transition={unoCalled ? {} : { repeat: Infinity, duration: 1 }}
+                      exit={{ scale: 0, transition: { duration: 0.15, repeat: 0 } }}
+                      onClick={() => {
+                        if (!unoCalled) play("uno");
+                        setUnoCalledAt(unoCalled ? null : moveCount);
+                      }}
                     >
-                      Pass
-                    </Button>
+                      UNO!
+                    </motion.button>
                   )}
-                </div>
-                <Hand
-                  myTurn={viewer === current && !view.winner}
-                  hand={hand}
-                  playable={playable}
-                  draggingId={dragging?.id ?? null}
-                  onPlay={playCard}
-                />
-              </>
+                </AnimatePresence>
+                {canPass && (
+                  <Button
+                    variant="secondary"
+                    className="!min-h-10"
+                    onClick={() => onMove({ type: "pass" })}
+                  >
+                    Pass
+                  </Button>
+                )}
+              </div>
+            )}
+          </RoundTable>
+
+          <section aria-label="Your hand" className="shrink-0 pb-1">
+            {viewer ? (
+              <Hand
+                myTurn={viewer === current && !view.winner}
+                hand={hand}
+                playable={playable}
+                draggingId={dragging?.id ?? null}
+                onPlay={playCard}
+              />
             ) : (
-              <p className="pb-4 text-center font-display text-xl text-white [text-shadow:1px_1px_0_var(--color-ink)]">
+              <p className="py-6 text-center font-display text-xl text-white [text-shadow:1px_1px_0_var(--color-ink)]">
                 {emptyHandMessage}
               </p>
             )}
@@ -481,13 +456,21 @@ export function UnoTable({
   );
 }
 
-function DiscardPile({ view, highlight }: { view: UnoView; highlight: boolean }) {
+function DiscardPile({
+  view,
+  highlight,
+  size,
+}: {
+  view: UnoView;
+  highlight: boolean;
+  size: "md" | "lg";
+}) {
   const { isOver, setNodeRef } = useDroppable({ id: DISCARD_ID });
   const top = view.topCard;
   return (
     <div
       ref={setNodeRef}
-      className={`relative flex size-36 items-center justify-center rounded-full transition ${
+      className={`relative flex items-center justify-center rounded-full transition ${size === "lg" ? "size-36" : "size-28"} ${
         isOver ? "scale-110" : highlight ? "scale-105" : ""
       }`}
       // The pile glows in the current color, brighter while a card is dragged over it.
@@ -497,7 +480,7 @@ function DiscardPile({ view, highlight }: { view: UnoView; highlight: boolean })
       data-testid="top-card"
     >
       <span
-        className="absolute size-28 rotate-12 rounded-2xl border-[3px] border-ink/40 bg-white/40"
+        className={`absolute rotate-12 rounded-2xl border-[3px] border-ink/40 bg-white/40 ${size === "lg" ? "size-28" : "size-20"}`}
         aria-hidden
       />
       <AnimatePresence initial={false}>
@@ -509,7 +492,7 @@ function DiscardPile({ view, highlight }: { view: UnoView; highlight: boolean })
           exit={{ opacity: 0, transition: { duration: 0.4 } }}
           transition={{ type: "spring", stiffness: 380, damping: 22 }}
         >
-          <UnoCardView card={top} size="lg" layoutId={top.id} />
+          <UnoCardView card={top} size={size} layoutId={top.id} />
         </motion.div>
       </AnimatePresence>
     </div>
@@ -529,41 +512,162 @@ function Hand({
   draggingId: string | null;
   onPlay(card: UnoCard): void;
 }) {
-  const n = hand.length;
-  // Fan the cards in an arc; the more cards, the tighter they overlap.
-  const spread = Math.min(7, 50 / Math.max(n, 1));
-  const [width, setWidth] = useState(0);
-  const measure = useCallback((node: HTMLDivElement | null) => {
-    // Without ResizeObserver (very old web views, test DOMs) the default overlap is used.
-    if (!node || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => setWidth(entry!.contentRect.width));
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-  // Overlap just enough to fit, but always leave a strip of each card visible to tap; if even
-  // that doesn't fit, the hand scrolls sideways.
-  const needed = n > 1 && width > 0 ? (CARD_WIDTH * n - width) / (n - 1) : 0;
-  const overlap = Math.min(CARD_WIDTH - MIN_VISIBLE, Math.max(12, needed));
+  const [measure, { width }] = useElementSize<HTMLDivElement>();
+  // Overlap just enough to fit, leaving a strip of each card to tap; a big hand gets more rows
+  // rather than scrolling.
+  const { rows, overlap } = fanLayout(hand.length, width - 16, CARD_WIDTH, MIN_VISIBLE);
+  const liftScale = rows.length > 1 ? 0.8 : 1.6;
+  const widest = Math.max(0, ...rows.map((row) => row.length));
+  // Room below for the outer cards, which dip down and tilt at the ends of the arc.
+  const dip = (Math.max(0, widest - 1) / 2) ** 1.6 * liftScale + 18;
   return (
-    <div ref={measure} className="flex w-full justify-center-safe overflow-x-auto px-6 pt-3 pb-2">
-      <AnimatePresence initial={false}>
-        {hand.map((card, i) => {
-          const offset = i - (n - 1) / 2;
-          return (
-            <HandCard
-              key={card.id}
-              card={card}
-              playable={playable.has(card.id)}
-              dimmed={myTurn && !playable.has(card.id)}
-              hidden={card.id === draggingId}
-              rotate={offset * spread}
-              lift={Math.abs(offset) ** 1.6 * 1.6}
-              marginLeft={i === 0 ? 0 : -overlap}
-              onPlay={onPlay}
+    <div
+      ref={measure}
+      className="flex w-full flex-col items-center px-2 pt-3"
+      style={{ paddingBottom: dip }}
+    >
+      {rows.map((row, r) => {
+        const n = row.length;
+        // Fan each row in an arc; the more cards, the flatter the arc.
+        const spread = Math.min(7, 50 / Math.max(n, 1));
+        return (
+          <div key={r} className={`flex justify-center ${r > 0 ? "-mt-20" : ""}`}>
+            <AnimatePresence initial={false}>
+              {row.map((index, i) => {
+                const card = hand[index]!;
+                const offset = i - (n - 1) / 2;
+                return (
+                  <HandCard
+                    key={card.id}
+                    card={card}
+                    playable={playable.has(card.id)}
+                    dimmed={myTurn && !playable.has(card.id)}
+                    hidden={card.id === draggingId}
+                    rotate={offset * spread}
+                    lift={Math.abs(offset) ** 1.6 * liftScale}
+                    marginLeft={i === 0 ? 0 : -overlap}
+                    onPlay={onPlay}
+                  />
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Another player's place at the table: who they are, how many cards they hold, whose turn. */
+function OpponentSeat({
+  name,
+  isBot,
+  connected,
+  cardCount,
+  isTurn,
+  dense,
+}: {
+  name: string;
+  isBot: boolean;
+  connected: boolean;
+  cardCount: number;
+  isTurn: boolean;
+  dense: boolean;
+}) {
+  const backs = Math.min(cardCount, 4);
+  const cards = cardCount === 1 ? "card" : "cards";
+  if (dense) {
+    return (
+      <div
+        className={`relative flex w-[3.7rem] flex-col items-center rounded-2xl border-2 border-ink px-0.5 pt-1 pb-0.5 ${
+          isTurn ? "bg-sunny shadow-[2px_3px_0_var(--color-ink)]" : "bg-white/90"
+        } ${connected ? "" : "opacity-60"}`}
+      >
+        <span className="relative">
+          <Avatar name={name} isBot={isBot} size="sm" active={isTurn} />
+          <span
+            className="absolute -right-3 -bottom-1 rounded-full border-2 border-ink bg-ink px-1 text-[0.65rem] leading-tight font-black text-white"
+            data-testid={`card-count-${name}`}
+          >
+            {cardCount}
+            <span className="sr-only"> {cards}</span>
+          </span>
+        </span>
+        <span className="w-full truncate text-center text-[0.65rem] font-bold">{name}</span>
+        <AnimatePresence>
+          {cardCount === 1 && (
+            <motion.strong
+              key="uno"
+              className="absolute -top-3 -right-2 rounded-full border-2 border-ink bg-cherry px-1.5 font-display text-xs text-white"
+              initial={{ scale: 0 }}
+              animate={{ scale: [0, 1.5, 1], rotate: 8 }}
+              exit={{ scale: 0 }}
+            >
+              UNO!
+            </motion.strong>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`relative flex w-[4.9rem] flex-col items-center rounded-2xl border-[2.5px] border-ink px-1 pt-1 pb-1 transition sm:w-28 ${
+        isTurn ? "bg-sunny shadow-[3px_4px_0_var(--color-ink)]" : "bg-white/90"
+      } ${connected ? "" : "opacity-60"}`}
+    >
+      <span className="flex items-end gap-1">
+        <Avatar name={name} isBot={isBot} size="sm" active={isTurn} />
+        {/* A mini fan of card backs. */}
+        <span className="flex h-8 items-end pl-2" aria-hidden>
+          {Array.from({ length: backs }, (_, i) => (
+            <UnoCardBack
+              key={i}
+              size="sm"
+              className="-ml-3 !h-7 !w-5 origin-bottom !rounded-md !border-[1.5px] first:ml-0"
+              style={{ rotate: (i - (backs - 1) / 2) * 12 }}
             />
-          );
-        })}
+          ))}
+        </span>
+      </span>
+      <span className="w-full truncate text-center font-display text-xs font-semibold sm:text-sm">
+        {name}
+      </span>
+      <span
+        className="text-[0.65rem] leading-tight font-bold text-ink/70 sm:text-xs"
+        data-testid={`card-count-${name}`}
+      >
+        {cardCount} {cards}
+        {!connected && " · away"}
+      </span>
+      <AnimatePresence>
+        {cardCount === 1 && (
+          <motion.strong
+            key="uno"
+            className="absolute -top-3 -right-2 rounded-full border-2 border-ink bg-cherry px-2 font-display text-sm text-white shadow-[2px_2px_0_var(--color-ink)]"
+            initial={{ scale: 0, rotate: -30 }}
+            animate={{ scale: [0, 1.5, 1], rotate: 8 }}
+            exit={{ scale: 0 }}
+          >
+            UNO!
+          </motion.strong>
+        )}
       </AnimatePresence>
+      {isTurn && (
+        <span
+          className="absolute -bottom-2.5 flex gap-1 rounded-full border-2 border-ink bg-white px-2 py-0.5"
+          aria-hidden
+        >
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              className="size-1.5 rounded-full bg-ink"
+              animate={{ y: [0, -3, 0] }}
+              transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15 }}
+            />
+          ))}
+        </span>
+      )}
     </div>
   );
 }
@@ -592,7 +696,7 @@ function HandCard({
     <motion.div
       ref={setNodeRef}
       {...attributes}
-      {...listeners}
+      {...trustedPointerListeners(listeners)}
       tabIndex={-1}
       role={undefined}
       className="touch-none"

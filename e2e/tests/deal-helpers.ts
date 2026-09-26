@@ -9,6 +9,16 @@ async function tryClick(locator: Locator): Promise<boolean> {
   }
 }
 
+/** Focuses and presses Enter, if the element is ready soon. */
+async function tryPress(locator: Locator): Promise<boolean> {
+  try {
+    await locator.press("Enter", { timeout: 1_000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 const GAME_OVER = /wins!$|^It's a draw$/;
 
 /**
@@ -61,7 +71,9 @@ export async function playDealUntilGameOver(page: Page, timeoutMs = 160_000): Pr
     }
     const playable = page.locator('[data-testid="deal-card"][data-active="true"]:enabled');
     if ((await playable.count()) > 0) {
-      await tryClick(playable.first());
+      // The hand overlaps to fit the screen, so a card's center can be under its neighbor: use
+      // the keyboard, which also checks the hand is keyboard-usable.
+      await tryPress(playable.first());
       continue;
     }
     const endTurn = page.getByRole("button", { name: "End turn" });
