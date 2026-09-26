@@ -1,5 +1,5 @@
 import { UNO_COLORS, type UnoColor, type UnoMove, type UnoOptions } from "@cardhub/engine";
-import { BOT_LEVELS, type BotLevel } from "@cardhub/bots";
+import { UNO_BOT_LEVELS, type BotLevel } from "@cardhub/bots";
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -38,7 +38,11 @@ export function parseHouseRules(value: unknown): Partial<UnoOptions> {
   return rules;
 }
 
-export function parseBotLevel(value: unknown): BotLevel {
+/** A bot level the game supports, defaulting to "normal". */
+export function parseBotLevel(
+  value: unknown,
+  allowed: readonly BotLevel[] = UNO_BOT_LEVELS,
+): BotLevel {
   const level = isObject(value) ? value.level : undefined;
-  return BOT_LEVELS.includes(level as BotLevel) ? (level as BotLevel) : "normal";
+  return allowed.includes(level as BotLevel) ? (level as BotLevel) : "normal";
 }

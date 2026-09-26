@@ -1,4 +1,4 @@
-import { BOT_LEVELS, type BotLevel } from "@cardhub/bots";
+import { UNO_BOT_LEVELS, type BotLevel } from "@cardhub/bots";
 import type { UnoOptions } from "@cardhub/engine";
 import type { UnoRoomSnapshot } from "@cardhub/shared";
 import { useEffect, useState } from "react";
@@ -137,7 +137,7 @@ function Lobby({ snapshot, onLeave }: { snapshot: UnoRoomSnapshot; onLeave(): vo
               value={botLevel}
               onChange={(e) => setBotLevel(e.target.value as BotLevel)}
             >
-              {BOT_LEVELS.map((level) => (
+              {UNO_BOT_LEVELS.map((level) => (
                 <option key={level} value={level}>
                   {level}
                 </option>

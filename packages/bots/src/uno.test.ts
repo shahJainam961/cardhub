@@ -116,3 +116,49 @@ describe("uno bots", () => {
     });
   });
 });
+
+describe("uno bots and hidden information", () => {
+  it("make the same choice however the cards they can't see are arranged", () => {
+    let checked = 0;
+    for (let seed = 0; seed < 20; seed++) {
+      const players = ["p0", "p1", "p2"];
+      let state = startGame(uno, { players, options: { jumpIn: true, stacking: true }, seed });
+      for (let move = 0; move < 2_000 && !uno.result(state); move++) {
+        const player = uno.activePlayers(state)[0]!;
+        for (const level of ["easy", "normal"] as const) {
+          // Deal the other hands and the draw pile (and discards under the top card) again.
+          const shuffled = structuredClone(state);
+          const others = players.filter((p) => p !== player);
+          const top = shuffled.discardPile.pop()!;
+          const hidden = [
+            ...shuffled.drawPile,
+            ...shuffled.discardPile,
+            ...others.flatMap((p) => shuffled.hands[p]!),
+          ];
+          createRng(move + 1).shuffle(hidden);
+          for (const p of others) shuffled.hands[p] = hidden.splice(0, state.hands[p]!.length);
+          shuffled.drawPile = hidden.splice(0, state.drawPile.length);
+          shuffled.discardPile = [...hidden, top];
+
+          const decide = (s: typeof state) =>
+            chooseUnoMove(
+              uno.playerView(s, player),
+              uno.legalMoves(s, player),
+              level,
+              createRng(move),
+            );
+          expect(decide(shuffled)).toEqual(decide(state));
+          checked++;
+        }
+        const move_ = chooseUnoMove(
+          uno.playerView(state, player),
+          uno.legalMoves(state, player),
+          "normal",
+          createRng(move),
+        );
+        state = playMove(uno, state, player, move_);
+      }
+    }
+    expect(checked).toBeGreaterThan(1000);
+  });
+});

@@ -1,4 +1,4 @@
-import { BOT_LEVELS, type BotLevel } from "@cardhub/bots";
+import { UNO_BOT_LEVELS, type BotLevel } from "@cardhub/bots";
 import { uno, type UnoOptions } from "@cardhub/engine";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -95,7 +95,7 @@ export function UnoSetupPage() {
                 }
               >
                 <option value="human">Human</option>
-                {BOT_LEVELS.map((level) => (
+                {UNO_BOT_LEVELS.map((level) => (
                   <option key={level} value={level}>
                     Bot ({level})
                   </option>
