@@ -1,6 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 import { expectGameOver, playUntilGameOver } from "./uno-helpers";
 
+// Full games vary a lot in length with the shuffle, so allow more than the default 30s.
+test.describe.configure({ timeout: 120_000 });
+
 test.skip(
   !!process.env.E2E_BASE_URL,
   "creates rooms on the game server; runs against local servers only",

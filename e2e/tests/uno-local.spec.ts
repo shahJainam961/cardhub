@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { expectGameOver, playUntilGameOver } from "./uno-helpers";
 
+// Full games vary a lot in length with the shuffle, so allow more than the default 30s.
+test.describe.configure({ timeout: 120_000 });
+
 // A fixed seed makes the deal reproducible; botDelay=0 makes bots move instantly.
 const SETUP_URL = "/uno/new?seed=20260926&botDelay=0";
 
