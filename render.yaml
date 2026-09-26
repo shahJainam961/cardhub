@@ -7,8 +7,9 @@ services:
     plan: free
     region: singapore
     rootDir: .
-    # Installs only the server and the workspace packages it uses.
-    buildCommand: npm install -g pnpm@10.24.0 && pnpm install --frozen-lockfile --filter @cardhub/server...
+    # Installs only the server and the workspace packages it uses. npx runs the pinned pnpm from
+    # npm's cache, because Render's global node_modules is read-only.
+    buildCommand: npx --yes pnpm@10.24.0 install --frozen-lockfile --filter @cardhub/server...
     # No pnpm at runtime: run the TypeScript entry point with tsx directly.
     startCommand: cd apps/server && ./node_modules/.bin/tsx src/index.ts
     healthCheckPath: /
