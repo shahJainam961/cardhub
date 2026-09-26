@@ -3,7 +3,7 @@ import { uno } from "@cardhub/engine";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it } from "vitest";
-import { cardLabel } from "./cardLabel";
+import { cardLabel } from "@cardhub/shared";
 import type { Seat } from "./localGame";
 import { useUnoStore } from "./store";
 import { UnoGamePage } from "./UnoGamePage";

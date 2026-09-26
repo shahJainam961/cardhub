@@ -1,5 +1,5 @@
 import { isWild, type UnoCard, type UnoColor } from "@cardhub/engine";
-import { cardLabel } from "../cardLabel";
+import { cardLabel } from "@cardhub/shared";
 
 export const COLOR_BG: Record<UnoColor, string> = {
   red: "bg-red-600 text-white",

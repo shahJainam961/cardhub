@@ -38,12 +38,20 @@ export function HomePage() {
             <h2 className="text-xl font-bold">{game.name}</h2>
             <p className="mt-1 flex-1 text-sm text-white/70">{game.blurb}</p>
             {game.ready ? (
-              <Link
-                to={`/${game.id}/new`}
-                className="mt-4 rounded-xl bg-amber-400 px-4 py-2 text-center font-semibold text-slate-900 hover:bg-amber-300"
-              >
-                Play {game.name}
-              </Link>
+              <div className="mt-4 flex flex-col gap-2">
+                <Link
+                  to={`/${game.id}/new`}
+                  className="rounded-xl bg-amber-400 px-4 py-2 text-center font-semibold text-slate-900 hover:bg-amber-300"
+                >
+                  Play {game.name}
+                </Link>
+                <Link
+                  to={`/${game.id}/online`}
+                  className="rounded-xl bg-white/10 px-4 py-2 text-center font-semibold hover:bg-white/20"
+                >
+                  Play online
+                </Link>
+              </div>
             ) : (
               <span className="mt-4 rounded-xl bg-white/5 px-4 py-2 text-center text-sm text-white/50">
                 Coming soon

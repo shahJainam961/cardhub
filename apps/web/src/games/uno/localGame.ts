@@ -1,15 +1,14 @@
-import { chooseUnoMove, unoBotWantsToJumpIn, type BotLevel } from "@cardhub/bots";
+import { pickUnoBotAction, type BotLevel } from "@cardhub/bots";
 import {
-  createRng,
   playMove,
   startGame,
-  uno,
   type PlayerId,
   type UnoMove,
   type UnoOptions,
   type UnoState,
+  uno,
 } from "@cardhub/engine";
-import { cardLabel } from "./cardLabel";
+import { describeUnoMove } from "@cardhub/shared";
 
 export interface Seat {
   id: PlayerId;
@@ -87,27 +86,10 @@ export function applyLocalMove(game: LocalUnoGame, player: PlayerId, move: UnoMo
 
 /** The next move a bot wants to make, or `null` when it is a human's turn. */
 export function nextBotAction(game: LocalUnoGame): { player: PlayerId; move: UnoMove } | null {
-  const { state } = game;
-  if (uno.result(state)) return null;
-  const rng = createRng((game.seed ^ Math.imul(game.moveCount + 1, 0x9e3779b1)) >>> 0);
-  const decide = (player: PlayerId) => ({
-    player,
-    move: chooseUnoMove(
-      uno.playerView(state, player),
-      uno.legalMoves(state, player),
-      seatOf(game, player).level,
-      rng,
-    ),
-  });
-
-  const current = currentPlayer(state);
-  for (const player of uno.activePlayers(state)) {
-    const seat = seatOf(game, player);
-    if (player !== current && seat.kind === "bot" && unoBotWantsToJumpIn(seat.level, rng)) {
-      return decide(player);
-    }
-  }
-  return seatOf(game, current).kind === "bot" ? decide(current) : null;
+  const bots = Object.fromEntries(
+    game.seats.filter((s) => s.kind === "bot").map((s) => [s.id, s.level]),
+  );
+  return pickUnoBotAction(game.state, bots, game.seed + Math.imul(game.moveCount + 1, 0x9e3779b1));
 }
 
 export function describeMove(
@@ -116,31 +98,5 @@ export function describeMove(
   move: UnoMove,
   after: UnoState,
 ): string {
-  const before = game.state;
-  const name = seatOf(game, player).name;
-  const handBefore = before.hands[player]!.length;
-
-  switch (move.type) {
-    case "pass":
-      return `${name} passed`;
-    case "draw": {
-      const drawn = after.hands[player]!.length - handBefore;
-      return drawn === 1 ? `${name} drew a card` : `${name} drew ${drawn} cards`;
-    }
-    case "play": {
-      const card = before.hands[player]!.find((c) => c.id === move.cardId)!;
-      const jumpedIn = player !== currentPlayer(before);
-      let text = `${name} ${jumpedIn ? "jumped in with" : "played"} ${cardLabel(card)}`;
-      if (move.color) text += ` and chose ${move.color}`;
-      if (move.target) text += ` and swapped hands with ${seatOf(game, move.target).name}`;
-      const handMoves =
-        before.options.sevenZero &&
-        card.kind === "number" &&
-        (card.value === 7 || card.value === 0);
-      if (handBefore === 2 && !move.uno && !handMoves) {
-        text += `, but forgot to call UNO (+${before.options.unoPenalty})`;
-      }
-      return text;
-    }
-  }
+  return describeUnoMove(game.state, after, player, move, (id) => seatOf(game, id).name);
 }

@@ -6,32 +6,8 @@ import { useAuthStore } from "../../account/authStore";
 import { Button } from "../../components/Button";
 import { readDebugParams } from "../../lib/random";
 import type { Seat } from "./localGame";
+import { HOUSE_RULES } from "./houseRules";
 import { useUnoStore } from "./store";
-
-type VariantKey = "stacking" | "sevenZero" | "jumpIn" | "drawUntilPlayable";
-
-const VARIANTS: { key: VariantKey; name: string; description: string }[] = [
-  {
-    key: "stacking",
-    name: "Stacking",
-    description: "Answer a +2 or +4 with another one; the next player draws the total.",
-  },
-  {
-    key: "sevenZero",
-    name: "7-0",
-    description: "A 7 swaps hands with a player you choose; a 0 passes every hand along.",
-  },
-  {
-    key: "jumpIn",
-    name: "Jump-in",
-    description: "Play an identical card out of turn; play continues from you.",
-  },
-  {
-    key: "drawUntilPlayable",
-    name: "Draw until playable",
-    description: "Keep drawing until you get a card you can play.",
-  },
-];
 
 let seatCounter = 0;
 const newSeat = (kind: Seat["kind"], name: string, level: BotLevel = "normal"): Seat => ({
@@ -161,7 +137,7 @@ export function UnoSetupPage() {
         <h2 id="variants-heading" className="text-lg font-bold">
           House rules
         </h2>
-        {VARIANTS.map((variant) => (
+        {HOUSE_RULES.map((variant) => (
           <label key={variant.key} className="flex cursor-pointer gap-3 rounded-xl bg-felt-800 p-3">
             <input
               type="checkbox"

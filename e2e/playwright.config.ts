@@ -29,11 +29,19 @@ export default defineConfig({
   ...(process.env.E2E_BASE_URL
     ? {}
     : {
-        webServer: {
-          command: "pnpm --filter @cardhub/web build && pnpm --filter @cardhub/web preview",
-          url: baseURL,
-          reuseExistingServer: !isCI,
-          timeout: 120_000,
-        },
+        webServer: [
+          {
+            command: "pnpm --filter @cardhub/web build && pnpm --filter @cardhub/web preview",
+            url: baseURL,
+            reuseExistingServer: !isCI,
+            timeout: 120_000,
+          },
+          {
+            command: "pnpm --filter @cardhub/server start",
+            port: 2567,
+            reuseExistingServer: !isCI,
+            timeout: 60_000,
+          },
+        ],
       }),
 });

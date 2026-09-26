@@ -9,7 +9,7 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "pnpm --filter @cardhub/web dev",
+    "dev": "pnpm --parallel --filter @cardhub/web --filter @cardhub/server dev",
     "build": "pnpm --filter @cardhub/web build",
     "test": "vitest run",
     "test:watch": "vitest",

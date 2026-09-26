@@ -1,0 +1,17 @@
+{
+  "name": "@cardhub/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Code shared by the web app and game server: display text and the online protocol",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cardhub/bots": "workspace:*",
+    "@cardhub/engine": "workspace:*"
+  }
+}
