@@ -243,3 +243,10 @@ describe("UnoRoom game", () => {
     expect(back.latest().view?.hand.length).toBeGreaterThan(0);
   });
 });
+
+describe("HTTP routes", () => {
+  it("reports the deployed version", async () => {
+    const response = await colyseus.http.get("/version");
+    expect(response.data).toEqual({ commit: "dev" });
+  });
+});
