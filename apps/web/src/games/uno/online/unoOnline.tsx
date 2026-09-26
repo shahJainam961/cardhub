@@ -2,6 +2,7 @@ import { UNO_BOT_LEVELS } from "@cardhub/bots";
 import { uno, type UnoOptions } from "@cardhub/engine";
 import { UNO_ROOM, type UnoClientMessages, type UnoRoomSnapshot } from "@cardhub/shared";
 import { Button } from "../../../components/Button";
+import { RuleToggle } from "../../../components/RuleToggle";
 import { createOnlineStore } from "../../../online/createOnlineStore";
 import { OnlinePage } from "../../../online/OnlinePage";
 import { OnlineRoom, type OnlineGameConfig } from "../../../online/OnlineRoom";
@@ -36,26 +37,19 @@ export function UnoRoomPage() {
 function HouseRules({ snapshot, isHost }: { snapshot: UnoRoomSnapshot; isHost: boolean }) {
   const send = useUnoOnline((s) => s.send);
   return (
-    <section aria-labelledby="rules-heading" className="flex flex-col gap-2">
-      <h2 id="rules-heading" className="text-lg font-bold">
+    <section aria-labelledby="rules-heading" className="panel flex flex-col gap-2 p-5">
+      <h2 id="rules-heading" className="text-2xl font-semibold">
         House rules
       </h2>
       {HOUSE_RULES.map((rule) => (
-        <label key={rule.key} className="flex gap-3 rounded-xl bg-felt-800 p-3">
-          <input
-            type="checkbox"
-            className="mt-1 size-5 accent-amber-400"
-            checked={snapshot.options[rule.key]}
-            disabled={!isHost}
-            onChange={(e) =>
-              send("setOptions", { [rule.key]: e.target.checked } as Partial<UnoOptions>)
-            }
-          />
-          <span>
-            <span className="font-semibold">{rule.name}</span>
-            <span className="block text-sm text-white/70">{rule.description}</span>
-          </span>
-        </label>
+        <RuleToggle
+          key={rule.key}
+          name={rule.name}
+          description={rule.description}
+          checked={snapshot.options[rule.key]}
+          disabled={!isHost}
+          onChange={(checked) => send("setOptions", { [rule.key]: checked } as Partial<UnoOptions>)}
+        />
       ))}
     </section>
   );

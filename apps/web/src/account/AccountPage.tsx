@@ -1,32 +1,28 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router";
 import { Button } from "../components/Button";
+import { TopBar } from "../components/TopBar";
 import { MAX_NAME_LENGTH, useAuthStore } from "./authStore";
 
-const inputClass = "min-h-11 w-full rounded-lg bg-black/30 px-3";
+const inputClass = "field w-full";
 
 export function AccountPage() {
   const { status, account, error } = useAuthStore();
 
   return (
     <main className="mx-auto flex min-h-full max-w-md flex-col gap-6 px-4 py-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-black">Account</h1>
-        <Link to="/" className="text-sm text-white/70 underline">
-          Home
-        </Link>
-      </header>
+      <TopBar back={{ to: "/", label: "Home" }} />
+      <h1 className="headline text-4xl font-bold">Account</h1>
 
       {error && (
-        <p className="rounded-xl bg-red-600/90 p-3" role="alert">
+        <p className="rounded-2xl bg-cherry p-3 font-bold text-white" role="alert">
           {error}
         </p>
       )}
 
-      {status === "loading" && <p className="text-white/70">Signing you in…</p>}
+      {status === "loading" && <p className="font-bold text-white">Signing you in…</p>}
 
       {status === "offline" && (
-        <p className="rounded-xl bg-felt-800 p-4 text-white/80">
+        <p className="panel p-5 font-semibold text-ink/70">
           You&apos;re playing offline, so accounts are unavailable. Games on this device still work.
         </p>
       )}
@@ -41,9 +37,9 @@ export function AccountPage() {
               <SignInSection />
             </>
           ) : (
-            <section className="flex flex-col gap-3 rounded-2xl bg-felt-800 p-4">
-              <h2 className="text-lg font-bold">Signed in</h2>
-              <p className="text-white/80" data-testid="account-email">
+            <section className="flex flex-col gap-3 panel p-5">
+              <h2 className="text-2xl font-semibold">Signed in</h2>
+              <p className="text-ink/70" data-testid="account-email">
                 {account.email}
               </p>
               <Button variant="secondary" onClick={() => void useAuthStore.getState().signOut()}>
@@ -68,8 +64,8 @@ function NameForm({ initialName }: { initialName: string }) {
   };
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-2xl bg-felt-800 p-4">
-      <label htmlFor="display-name" className="text-lg font-bold">
+    <form onSubmit={onSubmit} className="flex flex-col gap-3 panel p-5">
+      <label htmlFor="display-name" className="text-2xl font-semibold">
         Display name
       </label>
       <input
@@ -86,7 +82,7 @@ function NameForm({ initialName }: { initialName: string }) {
         Save name
       </Button>
       {saved && (
-        <p className="text-sm text-amber-300" role="status">
+        <p className="text-sm font-bold text-mint-dark" role="status">
           Name saved.
         </p>
       )}
@@ -131,7 +127,7 @@ function EmailCodeForm({
           });
         }}
       >
-        <label htmlFor={`${idPrefix}-email`} className="text-sm text-white/80">
+        <label htmlFor={`${idPrefix}-email`} className="text-sm text-ink/70">
           Email
         </label>
         <input
@@ -160,7 +156,7 @@ function EmailCodeForm({
         });
       }}
     >
-      <label htmlFor={`${idPrefix}-code`} className="text-sm text-white/80">
+      <label htmlFor={`${idPrefix}-code`} className="text-sm text-ink/70">
         6-digit code sent to {sentTo}
       </label>
       <input
@@ -187,14 +183,11 @@ function EmailCodeForm({
 function LinkEmailSection() {
   const { requestLinkCode, verifyLinkCode } = useAuthStore();
   return (
-    <section
-      className="flex flex-col gap-3 rounded-2xl bg-felt-800 p-4"
-      aria-labelledby="link-heading"
-    >
-      <h2 id="link-heading" className="text-lg font-bold">
+    <section className="flex flex-col gap-3 panel p-5" aria-labelledby="link-heading">
+      <h2 id="link-heading" className="text-2xl font-semibold">
         Save your progress
       </h2>
-      <p className="text-sm text-white/70">
+      <p className="text-sm text-ink/60">
         You&apos;re playing as a guest. Add your email to keep your progress and use it on other
         devices.
       </p>
@@ -211,16 +204,11 @@ function LinkEmailSection() {
 function SignInSection() {
   const { requestSignInCode, verifySignInCode } = useAuthStore();
   return (
-    <section
-      className="flex flex-col gap-3 rounded-2xl bg-felt-800 p-4"
-      aria-labelledby="signin-heading"
-    >
-      <h2 id="signin-heading" className="text-lg font-bold">
+    <section className="flex flex-col gap-3 panel p-5" aria-labelledby="signin-heading">
+      <h2 id="signin-heading" className="text-2xl font-semibold">
         Already have an account?
       </h2>
-      <p className="text-sm text-white/70">
-        Signing in replaces this guest account on this device.
-      </p>
+      <p className="text-sm text-ink/60">Signing in replaces this guest account on this device.</p>
       <EmailCodeForm
         idPrefix="signin"
         sendLabel="Send sign-in code"

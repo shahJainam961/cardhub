@@ -3,6 +3,7 @@ import type { ClientMessages, RoomSnapshot } from "@cardhub/shared";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import type { StoreApi, UseBoundStore } from "zustand";
+import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
 import type { OnlineStore } from "./createOnlineStore";
 
@@ -53,11 +54,11 @@ export function OnlineRoom<Snapshot extends AnySnapshot, Messages extends AnyMes
   if (status === "error") {
     return (
       <main className="mx-auto flex min-h-full max-w-md flex-col gap-4 px-4 py-8">
-        <h1 className="text-3xl font-black">Room {code.toUpperCase()}</h1>
-        <p className="rounded-xl bg-red-600/90 p-3" role="alert">
+        <h1 className="headline text-4xl font-bold">Room {code.toUpperCase()}</h1>
+        <p className="rounded-2xl bg-cherry p-3 font-bold text-white" role="alert">
           {error}
         </p>
-        <Link to={`${config.basePath}/online`} className="text-white/80 underline">
+        <Link to={`${config.basePath}/online`} className="font-bold text-white underline">
           Back to online play
         </Link>
       </main>
@@ -67,7 +68,7 @@ export function OnlineRoom<Snapshot extends AnySnapshot, Messages extends AnyMes
   if (!snapshot || snapshot.code !== code.toUpperCase()) {
     return (
       <main className="flex min-h-full items-center justify-center px-4">
-        <p className="text-white/80" role="status">
+        <p className="headline animate-pulse text-2xl" role="status">
           Joining room {code.toUpperCase()}…
         </p>
       </main>
@@ -110,13 +111,16 @@ function Lobby<Snapshot extends AnySnapshot, Messages extends AnyMessages>({
         <Button variant="secondary" onClick={onLeave}>
           Leave
         </Button>
-        <h1 className="text-xl font-bold">Online {config.title}</h1>
+        <h1 className="headline text-2xl font-bold">Online {config.title}</h1>
         <span className="w-16" />
       </header>
 
-      <section className="flex flex-col items-center gap-2 rounded-2xl bg-felt-800 p-5 text-center">
-        <p className="text-sm text-white/70">Room code</p>
-        <p className="text-5xl font-black tracking-[0.3em]" data-testid="room-code">
+      <section className="panel flex flex-col items-center gap-2 p-5 text-center">
+        <p className="text-sm font-bold text-ink/60">Room code</p>
+        <p
+          className="font-display text-5xl font-bold tracking-[0.3em] text-grape"
+          data-testid="room-code"
+        >
           {snapshot.code}
         </p>
         <Button variant="secondary" onClick={() => void copyLink()}>
@@ -125,32 +129,31 @@ function Lobby<Snapshot extends AnySnapshot, Messages extends AnyMessages>({
       </section>
 
       {notice && (
-        <p className="rounded-xl bg-red-600/90 p-3" role="alert">
+        <p className="rounded-2xl bg-cherry p-3 font-bold text-white" role="alert">
           {notice}
         </p>
       )}
 
-      <section aria-labelledby="seats-heading" className="flex flex-col gap-2">
-        <h2 id="seats-heading" className="text-lg font-bold">
+      <section aria-labelledby="seats-heading" className="panel flex flex-col gap-2 p-5">
+        <h2 id="seats-heading" className="text-2xl font-semibold">
           Players ({snapshot.seats.length}/{config.maxPlayers})
         </h2>
         <ul className="flex flex-col gap-2">
           {snapshot.seats.map((seat) => (
             <li
               key={seat.id}
-              className="flex items-center justify-between gap-2 rounded-xl bg-felt-800 p-3"
+              className="flex items-center justify-between gap-2 rounded-2xl bg-cloud p-2"
             >
-              <span>
-                <span className="font-semibold">{seat.name}</span>
-                {seat.id === snapshot.you && (
-                  <span className="ml-2 text-xs text-white/60">you</span>
-                )}
-                {seat.isHost && <span className="ml-2 text-xs text-amber-300">host</span>}
+              <span className="flex flex-wrap items-center gap-2">
+                <Avatar name={seat.name} isBot={seat.kind === "bot"} size="sm" />
+                <span className="font-display text-lg font-semibold">{seat.name}</span>
+                {seat.id === snapshot.you && <span className="ml-2 text-xs text-ink/50">you</span>}
+                {seat.isHost && <span className="ml-2 text-xs text-tangerine">host</span>}
                 {seat.kind === "bot" && (
-                  <span className="ml-2 text-xs text-white/60">bot ({seat.level})</span>
+                  <span className="ml-2 text-xs text-ink/50">bot ({seat.level})</span>
                 )}
                 {!seat.connected && (
-                  <span className="ml-2 text-xs text-amber-300">reconnecting…</span>
+                  <span className="ml-2 text-xs text-tangerine">reconnecting…</span>
                 )}
               </span>
               {isHost && seat.kind === "bot" && (
@@ -168,7 +171,7 @@ function Lobby<Snapshot extends AnySnapshot, Messages extends AnyMessages>({
         {isHost && (
           <div className="flex gap-2">
             <select
-              className="min-h-11 rounded-lg bg-black/30 px-2"
+              className="field px-2"
               aria-label="Bot level"
               value={botLevel}
               onChange={(e) => setBotLevel(e.target.value as BotLevel)}
@@ -180,7 +183,7 @@ function Lobby<Snapshot extends AnySnapshot, Messages extends AnyMessages>({
               ))}
             </select>
             <Button
-              variant="secondary"
+              variant="accent"
               disabled={full}
               onClick={() => send("addBot", { level: botLevel })}
             >
@@ -201,7 +204,7 @@ function Lobby<Snapshot extends AnySnapshot, Messages extends AnyMessages>({
           Start game
         </Button>
       ) : (
-        <p className="text-center text-white/70">Waiting for the host to start the game…</p>
+        <p className="headline text-center text-xl">Waiting for the host to start the game…</p>
       )}
     </main>
   );

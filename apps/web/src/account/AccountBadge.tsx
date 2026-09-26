@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { Avatar } from "../components/Avatar";
 import { useAuthStore } from "./authStore";
 
 export function AccountBadge() {
@@ -14,12 +15,15 @@ export function AccountBadge() {
   return (
     <Link
       to="/account"
-      className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm hover:bg-white/20"
+      className="flex items-center gap-2 rounded-full bg-white py-1 pr-4 pl-1 text-sm text-ink shadow-[0_4px_0_rgb(31_26_77/0.2)] transition hover:-translate-y-0.5"
       data-testid="account-badge"
     >
-      <span className="font-semibold">{label}</span>
+      <Avatar name={account?.displayName ?? "?"} size="sm" />
+      <span className="font-display font-semibold">{label}</span>
       {status === "ready" && account && (
-        <span className="rounded-full bg-black/30 px-2 text-xs text-white/70">
+        <span
+          className={`rounded-full px-2 text-xs font-bold ${account.isGuest ? "bg-cloud text-ink/70" : "bg-mint text-white"}`}
+        >
           {account.isGuest ? "Guest" : "Saved"}
         </span>
       )}

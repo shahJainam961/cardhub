@@ -1,18 +1,34 @@
+import { motion } from "motion/react";
 import type { ReactNode } from "react";
 
-/** Full-screen modal panel for pickers, handoffs and the game-over screen. */
-export function Overlay({ title, children }: { title: string; children: ReactNode }) {
+/** Modal dialog that pops in with a little bounce. */
+export function Overlay({
+  title,
+  children,
+  wide = false,
+}: {
+  title: string;
+  children: ReactNode;
+  wide?: boolean;
+}) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/55 p-3 backdrop-blur-sm sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-label={title}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
     >
-      <div className="w-full max-w-sm rounded-2xl bg-felt-800 p-6 text-center shadow-2xl ring-1 ring-white/10">
-        <h2 className="mb-4 text-xl font-bold">{title}</h2>
+      <motion.div
+        className={`panel max-h-[92vh] w-full overflow-y-auto p-6 text-center ${wide ? "max-w-2xl" : "max-w-md"}`}
+        initial={{ scale: 0.85, y: 40 }}
+        animate={{ scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 420, damping: 26 }}
+      >
+        <h2 className="mb-4 text-2xl font-semibold">{title}</h2>
         {children}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

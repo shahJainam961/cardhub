@@ -1,10 +1,35 @@
 @import "tailwindcss";
 
 @theme {
-  --color-felt-700: #0f6b4d;
-  --color-felt-800: #0b4a36;
-  --color-felt-900: #062a1f;
+  --font-display: "Fredoka Variable", "Nunito Variable", ui-rounded, system-ui, sans-serif;
+  --font-sans: "Nunito Variable", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Bright & playful palette. Ink is the text color on light surfaces. */
+  --color-ink: #1f1a4d;
+  --color-grape: #7b5cff;
+  --color-grape-dark: #5a3ee0;
+  --color-bubblegum: #ff5fa2;
+  --color-sunny: #ffd23f;
+  --color-sunny-dark: #e8b10c;
+  --color-mint: #2ed3a0;
+  --color-mint-dark: #13a67a;
+  --color-tangerine: #ff8a3d;
+  --color-cherry: #ff4d5e;
+  --color-cherry-dark: #d82f41;
+  --color-sky: #4cc3ff;
+  --color-cloud: #f6f3ff;
+
   --spacing-22: 5.5rem;
+
+  /* Bouncy entrance used by pop-in elements. */
+  --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(8px);
+  }
 }
 
 html,
@@ -15,22 +40,88 @@ body,
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 50% 35%, var(--color-felt-700), var(--color-felt-900) 75%);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* A game-night tablecloth: grape with a printed diamond pattern, lighter toward the center. */
+  background-color: var(--color-grape);
+  background-image:
+    radial-gradient(ellipse at 50% 30%, rgb(255 255 255 / 0.22), transparent 60%),
+    linear-gradient(45deg, rgb(31 26 77 / 0.1) 25%, transparent 25% 75%, rgb(31 26 77 / 0.1) 75%),
+    linear-gradient(45deg, rgb(31 26 77 / 0.1) 25%, transparent 25% 75%, rgb(31 26 77 / 0.1) 75%);
+  background-size:
+    100% 100%,
+    44px 44px,
+    44px 44px;
+  background-position:
+    0 0,
+    0 0,
+    22px 22px;
   background-attachment: fixed;
-  color: white;
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
 }
 
 /* Keeps content clear of notches and home indicators once wrapped with Capacitor. */
 .safe-area {
   padding-top: max(0.75rem, env(safe-area-inset-top));
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* A white "sticker": thick ink outline and a hard offset ink shadow, like a printed game piece. */
+@utility panel {
+  border-radius: 1.75rem;
+  border: 3px solid var(--color-ink);
+  background: white;
+  color: var(--color-ink);
+  box-shadow: 5px 6px 0 var(--color-ink);
+}
+
+/* A lighter, translucent surface for secondary areas. */
+@utility panel-soft {
+  border-radius: 1.25rem;
+  border: 2px dashed rgb(31 26 77 / 0.35);
+  background: rgb(255 255 255 / 0.85);
+  color: var(--color-ink);
+}
+
+/* Text inputs and selects. */
+@utility field {
+  min-height: 3rem;
+  border-radius: 1rem;
+  border: 2.5px solid var(--color-ink);
+  background: white;
+  padding-inline: 1rem;
+  color: var(--color-ink);
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.15s;
+  &:focus-visible,
+  &:focus {
+    border-color: var(--color-grape);
+    box-shadow: 0 0 0 4px rgb(123 92 255 / 0.35);
+  }
+}
+
+/* Sticker lettering: white letters with an ink outline and a hard drop shadow. */
+@utility headline {
+  font-family: var(--font-display);
+  color: white;
+  -webkit-text-stroke: 1.5px var(--color-ink);
+  paint-order: stroke fill;
+  text-shadow: 3px 4px 0 var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

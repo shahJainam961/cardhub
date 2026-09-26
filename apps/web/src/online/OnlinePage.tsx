@@ -1,7 +1,8 @@
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@cardhub/shared";
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { Button } from "../components/Button";
+import { TopBar } from "../components/TopBar";
 import { readDebugParams } from "../lib/random";
 import type { AnyMessages, AnySnapshot, OnlineGameConfig } from "./OnlineRoom";
 
@@ -25,40 +26,36 @@ export function OnlinePage<Snapshot extends AnySnapshot, Messages extends AnyMes
 
   return (
     <main className="mx-auto flex min-h-full max-w-md flex-col gap-6 px-4 py-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-black">Play {config.title} online</h1>
-        <Link to="/" className="text-sm text-white/70 underline">
-          Home
-        </Link>
-      </header>
+      <TopBar back={{ to: "/", label: "Home" }} />
+      <h1 className="headline text-4xl font-bold">Play {config.title} online</h1>
 
       {status === "error" && error && (
-        <p className="rounded-xl bg-red-600/90 p-3" role="alert">
+        <p className="rounded-2xl bg-cherry p-3 font-bold text-white" role="alert">
           {error}
         </p>
       )}
 
-      <section className="flex flex-col gap-3 rounded-2xl bg-felt-800 p-4">
-        <h2 className="text-lg font-bold">Host a game</h2>
-        <p className="text-sm text-white/70">You&apos;ll get a code to share with friends.</p>
-        <Button onClick={() => void onCreate()} disabled={status === "connecting"}>
+      <section className="flex flex-col gap-3 panel p-5">
+        <h2 className="text-2xl font-semibold">Host a game</h2>
+        <p className="text-sm text-ink/60">You&apos;ll get a code to share with friends.</p>
+        <Button variant="accent" onClick={() => void onCreate()} disabled={status === "connecting"}>
           {status === "connecting" ? "Creating…" : "Create room"}
         </Button>
       </section>
 
       <form
-        className="flex flex-col gap-3 rounded-2xl bg-felt-800 p-4"
+        className="flex flex-col gap-3 panel p-5"
         onSubmit={(e) => {
           e.preventDefault();
           navigate(`${config.basePath}/room/${code}`);
         }}
       >
-        <label htmlFor="room-code" className="text-lg font-bold">
+        <label htmlFor="room-code" className="font-display text-2xl font-semibold">
           Join with a code
         </label>
         <input
           id="room-code"
-          className="min-h-14 rounded-lg bg-black/30 px-3 text-center text-2xl font-bold tracking-[0.4em] uppercase"
+          className="field min-h-16 text-center font-display text-3xl tracking-[0.4em] uppercase"
           value={code}
           maxLength={ROOM_CODE_LENGTH}
           autoComplete="off"

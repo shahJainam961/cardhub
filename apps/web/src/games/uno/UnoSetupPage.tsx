@@ -1,26 +1,21 @@
-import { UNO_BOT_LEVELS, type BotLevel } from "@cardhub/bots";
+import { UNO_BOT_LEVELS } from "@cardhub/bots";
 import { uno, type UnoOptions } from "@cardhub/engine";
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useAuthStore } from "../../account/authStore";
 import { Button } from "../../components/Button";
+import { RuleToggle } from "../../components/RuleToggle";
+import { newSeat, SeatEditor, seatsAreValid } from "../../components/SeatEditor";
+import { TopBar } from "../../components/TopBar";
 import { readDebugParams } from "../../lib/random";
 import type { Seat } from "./localGame";
 import { HOUSE_RULES } from "./houseRules";
 import { useUnoStore } from "./store";
 
-let seatCounter = 0;
-const newSeat = (kind: Seat["kind"], name: string, level: BotLevel = "normal"): Seat => ({
-  id: `seat-${++seatCounter}`,
-  name,
-  kind,
-  level,
-});
-
-const defaultSeats = (myName: string) => [
-  newSeat("human", myName),
-  newSeat("bot", "Bot 1"),
-  newSeat("bot", "Bot 2"),
+const defaultSeats = (myName: string): Seat[] => [
+  newSeat<Seat>("human", myName),
+  newSeat<Seat>("bot", "Bot 1"),
+  newSeat<Seat>("bot", "Bot 2"),
 ];
 
 export function UnoSetupPage() {
@@ -31,20 +26,7 @@ export function UnoSetupPage() {
     () => lastSetup?.seats ?? defaultSeats(useAuthStore.getState().account?.displayName ?? "You"),
   );
   const [options, setOptions] = useState<Partial<UnoOptions>>(() => lastSetup?.options ?? {});
-
-  const update = (id: string, patch: Partial<Seat>) =>
-    setSeats((all) => all.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  const addSeat = (kind: Seat["kind"]) => {
-    const count = seats.filter((s) => s.kind === kind).length + 1;
-    setSeats((all) => [...all, newSeat(kind, kind === "bot" ? `Bot ${count}` : `Player ${count}`)]);
-  };
-
-  const names = seats.map((s) => s.name.trim());
-  const valid =
-    seats.length >= uno.minPlayers &&
-    seats.length <= uno.maxPlayers &&
-    names.every((n) => n.length > 0) &&
-    new Set(names).size === names.length;
+  const valid = seatsAreValid(seats, uno.minPlayers, uno.maxPlayers);
 
   const onStart = () => {
     start({
@@ -56,104 +38,34 @@ export function UnoSetupPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-full max-w-xl flex-col gap-6 px-4 py-8">
-      <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-black">New Uno game</h1>
-        <Link to="/" className="text-sm text-white/70 underline">
-          Home
-        </Link>
-      </header>
+    <main className="mx-auto flex min-h-full max-w-xl flex-col gap-5 px-4 py-6">
+      <TopBar back={{ to: "/", label: "Home" }} />
+      <h1 className="headline text-4xl font-bold">New Uno game</h1>
 
-      <section aria-labelledby="players-heading" className="flex flex-col gap-3">
-        <h2 id="players-heading" className="text-lg font-bold">
-          Players ({seats.length}/{uno.maxPlayers})
-        </h2>
-        <ul className="flex flex-col gap-2">
-          {seats.map((seat, index) => (
-            <li
-              key={seat.id}
-              className="flex flex-wrap items-center gap-2 rounded-xl bg-felt-800 p-3"
-            >
-              <input
-                className="min-h-11 min-w-0 flex-1 rounded-lg bg-black/30 px-3"
-                value={seat.name}
-                maxLength={20}
-                aria-label={`Player ${index + 1} name`}
-                onChange={(e) => update(seat.id, { name: e.target.value })}
-              />
-              <select
-                className="min-h-11 rounded-lg bg-black/30 px-2"
-                aria-label={`Player ${index + 1} type`}
-                value={seat.kind === "human" ? "human" : seat.level}
-                onChange={(e) =>
-                  update(
-                    seat.id,
-                    e.target.value === "human"
-                      ? { kind: "human" }
-                      : { kind: "bot", level: e.target.value as BotLevel },
-                  )
-                }
-              >
-                <option value="human">Human</option>
-                {UNO_BOT_LEVELS.map((level) => (
-                  <option key={level} value={level}>
-                    Bot ({level})
-                  </option>
-                ))}
-              </select>
-              <Button
-                variant="secondary"
-                aria-label={`Remove ${seat.name || `player ${index + 1}`}`}
-                disabled={seats.length <= uno.minPlayers}
-                onClick={() => setSeats((all) => all.filter((s) => s.id !== seat.id))}
-              >
-                ✕
-              </Button>
-            </li>
-          ))}
-        </ul>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            disabled={seats.length >= uno.maxPlayers}
-            onClick={() => addSeat("human")}
-          >
-            + Human
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={seats.length >= uno.maxPlayers}
-            onClick={() => addSeat("bot")}
-          >
-            + Bot
-          </Button>
-        </div>
-        {!valid && (
-          <p className="text-sm text-amber-300">Every player needs a different, non-empty name.</p>
-        )}
-      </section>
+      <SeatEditor
+        seats={seats}
+        onChange={setSeats}
+        botLevels={UNO_BOT_LEVELS}
+        minPlayers={uno.minPlayers}
+        maxPlayers={uno.maxPlayers}
+      />
 
-      <section aria-labelledby="variants-heading" className="flex flex-col gap-2">
-        <h2 id="variants-heading" className="text-lg font-bold">
+      <section aria-labelledby="variants-heading" className="panel flex flex-col gap-2 p-5">
+        <h2 id="variants-heading" className="text-2xl font-semibold">
           House rules
         </h2>
-        {HOUSE_RULES.map((variant) => (
-          <label key={variant.key} className="flex cursor-pointer gap-3 rounded-xl bg-felt-800 p-3">
-            <input
-              type="checkbox"
-              className="mt-1 size-5 accent-amber-400"
-              checked={options[variant.key] ?? false}
-              onChange={(e) => setOptions((o) => ({ ...o, [variant.key]: e.target.checked }))}
-            />
-            <span>
-              <span className="font-semibold">{variant.name}</span>
-              <span className="block text-sm text-white/70">{variant.description}</span>
-            </span>
-          </label>
+        {HOUSE_RULES.map((rule) => (
+          <RuleToggle
+            key={rule.key}
+            name={rule.name}
+            description={rule.description}
+            checked={options[rule.key] ?? false}
+            onChange={(checked) => setOptions((o) => ({ ...o, [rule.key]: checked }))}
+          />
         ))}
       </section>
 
-      <Button className="text-lg" disabled={!valid} onClick={onStart}>
+      <Button className="text-xl" disabled={!valid} onClick={onStart}>
         Start game
       </Button>
     </main>

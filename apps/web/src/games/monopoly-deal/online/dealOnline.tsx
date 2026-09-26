@@ -34,7 +34,7 @@ export function DealRoomPage() {
     <OnlineRoom
       config={config}
       lobbyExtras={() => (
-        <p className="text-sm text-white/70">
+        <p className="panel-soft p-4 text-center font-bold">
           Official 2024 rules: collect 3 complete sets of different colors.
         </p>
       )}
