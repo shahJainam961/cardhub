@@ -14,9 +14,11 @@ async function tryClick(locator: Locator): Promise<boolean> {
  * Plays for every human on this device until the game ends: handles handoffs, pickers,
  * calls UNO, plays the first playable card, otherwise draws or passes.
  */
-export async function playUntilGameOver(page: Page, maxSteps = 1_500): Promise<void> {
+export async function playUntilGameOver(page: Page, timeoutMs = 100_000): Promise<void> {
   const gameOver = page.getByRole("dialog", { name: /wins!$/ });
-  for (let step = 0; step < maxSteps; step++) {
+  // A time budget, not a step count: in online games much of the time is spent waiting for others.
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
     if (await gameOver.isVisible()) return;
 
     const showHand = page.getByRole("button", { name: /show my hand/ });
@@ -59,7 +61,7 @@ export async function playUntilGameOver(page: Page, maxSteps = 1_500): Promise<v
     }
     await page.waitForTimeout(25);
   }
-  throw new Error(`Game did not finish within ${maxSteps} steps`);
+  throw new Error(`Game did not finish within ${timeoutMs / 1000}s`);
 }
 
 export async function expectGameOver(page: Page): Promise<void> {

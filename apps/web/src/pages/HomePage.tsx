@@ -7,14 +7,22 @@ const GAMES = [
     name: "Uno",
     blurb: "Match colors and numbers, with house-rule variants.",
     ready: true,
+    online: true,
   },
   {
     id: "monopoly-deal",
     name: "Monopoly Deal",
     blurb: "Collect property sets and charge rent.",
-    ready: false,
+    ready: true,
+    online: false,
   },
-  { id: "chess", name: "Chess", blurb: "The classic strategy board game.", ready: false },
+  {
+    id: "chess",
+    name: "Chess",
+    blurb: "The classic strategy board game.",
+    ready: false,
+    online: false,
+  },
 ];
 
 export function HomePage() {
@@ -45,12 +53,14 @@ export function HomePage() {
                 >
                   Play {game.name}
                 </Link>
-                <Link
-                  to={`/${game.id}/online`}
-                  className="rounded-xl bg-white/10 px-4 py-2 text-center font-semibold hover:bg-white/20"
-                >
-                  Play online
-                </Link>
+                {game.online && (
+                  <Link
+                    to={`/${game.id}/online`}
+                    className="rounded-xl bg-white/10 px-4 py-2 text-center font-semibold hover:bg-white/20"
+                  >
+                    Play online
+                  </Link>
+                )}
               </div>
             ) : (
               <span className="mt-4 rounded-xl bg-white/5 px-4 py-2 text-center text-sm text-white/50">
