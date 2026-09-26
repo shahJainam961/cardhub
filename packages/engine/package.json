@@ -1,0 +1,16 @@
+{
+  "name": "@cardhub/engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure TypeScript game rules shared by the web app, bots and the game server",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2"
+  }
+}
