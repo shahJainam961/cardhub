@@ -12,6 +12,9 @@ import { supabase } from "../../../lib/supabase";
 
 const client = new Client(import.meta.env.VITE_GAME_SERVER_URL || "http://localhost:2567");
 
+/** How long to wait for the server to confirm a deliberate leave. */
+const LEAVE_TIMEOUT_MS = 1_000;
+
 type Status = "idle" | "connecting" | "connected" | "error";
 
 interface OnlineStore {
@@ -77,7 +80,16 @@ export const useOnlineStore = create<OnlineStore>()((set, get) => {
   const detach = async () => {
     const current = room;
     room = null;
-    if (current) await current.leave(true).catch(() => {});
+    if (!current) return;
+    // Some hosts' proxies (e.g. Render) drop the WebSocket close handshake, so `leave()` may
+    // never resolve and the SDK would treat the leave as a dropped connection and keep
+    // reconnecting. The server has already received the leave message by then, so turn
+    // reconnection off and stop waiting after a moment.
+    current.reconnection.enabled = false;
+    await Promise.race([
+      current.leave(true).catch(() => {}),
+      new Promise((resolve) => setTimeout(resolve, LEAVE_TIMEOUT_MS)),
+    ]);
   };
 
   return {
