@@ -1,17 +1,43 @@
-import { UNO_BOT_LEVELS, type BotLevel } from "@cardhub/bots";
-import type { UnoOptions } from "@cardhub/engine";
-import type { UnoRoomSnapshot } from "@cardhub/shared";
-import { useEffect, useState } from "react";
+import type { BotLevel } from "@cardhub/bots";
+import type { ClientMessages, RoomSnapshot } from "@cardhub/shared";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { Button } from "../../../components/Button";
-import { HOUSE_RULES } from "../houseRules";
-import { GameOverDialog, UnoTable } from "../components/UnoTable";
-import { useOnlineStore } from "./onlineStore";
+import type { StoreApi, UseBoundStore } from "zustand";
+import { Button } from "../components/Button";
+import type { OnlineStore } from "./createOnlineStore";
 
-export function OnlineRoomPage() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- any game's snapshot/messages
+export type AnySnapshot = RoomSnapshot<any, any, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyMessages = ClientMessages<any, any>;
+
+/** What a game provides to be playable online. */
+export interface OnlineGameConfig<Snapshot extends AnySnapshot, Messages extends AnyMessages> {
+  /** Display name, e.g. "Uno". */
+  title: string;
+  /** Route prefix, e.g. "/uno" (pages live at `${basePath}/online` and `${basePath}/room/:code`). */
+  basePath: string;
+  useStore: UseBoundStore<StoreApi<OnlineStore<Snapshot, Messages>>>;
+  botLevels: readonly BotLevel[];
+  maxPlayers: number;
+  minPlayers: number;
+}
+
+interface OnlineRoomProps<Snapshot extends AnySnapshot, Messages extends AnyMessages> {
+  config: OnlineGameConfig<Snapshot, Messages>;
+  /** Extra lobby section, e.g. Uno's house rules. */
+  lobbyExtras?: (snapshot: Snapshot, isHost: boolean) => ReactNode;
+  renderTable: (snapshot: Snapshot, onLeave: () => void) => ReactNode;
+}
+
+export function OnlineRoom<Snapshot extends AnySnapshot, Messages extends AnyMessages>({
+  config,
+  lobbyExtras,
+  renderTable,
+}: OnlineRoomProps<Snapshot, Messages>) {
   const { code = "" } = useParams();
   const navigate = useNavigate();
-  const { status, snapshot, error, joinRoom, leave } = useOnlineStore();
+  const { status, snapshot, error, joinRoom, leave } = config.useStore();
 
   // Join on arrival, which also covers shared links and page reloads. Only re-run when the code
   // in the URL changes, so leaving doesn't trigger a rejoin.
@@ -21,7 +47,7 @@ export function OnlineRoomPage() {
 
   const onLeave = () => {
     void leave();
-    navigate("/uno/online");
+    navigate(`${config.basePath}/online`);
   };
 
   if (status === "error") {
@@ -31,7 +57,7 @@ export function OnlineRoomPage() {
         <p className="rounded-xl bg-red-600/90 p-3" role="alert">
           {error}
         </p>
-        <Link to="/uno/online" className="text-white/80 underline">
+        <Link to={`${config.basePath}/online`} className="text-white/80 underline">
           Back to online play
         </Link>
       </main>
@@ -49,19 +75,29 @@ export function OnlineRoomPage() {
   }
 
   return snapshot.phase === "lobby" ? (
-    <Lobby snapshot={snapshot} onLeave={onLeave} />
+    <Lobby config={config} snapshot={snapshot} onLeave={onLeave} extras={lobbyExtras} />
   ) : (
-    <OnlineTable snapshot={snapshot} onLeave={onLeave} />
+    renderTable(snapshot, onLeave)
   );
 }
 
-function Lobby({ snapshot, onLeave }: { snapshot: UnoRoomSnapshot; onLeave(): void }) {
-  const { send, notice } = useOnlineStore();
+function Lobby<Snapshot extends AnySnapshot, Messages extends AnyMessages>({
+  config,
+  snapshot,
+  onLeave,
+  extras,
+}: {
+  config: OnlineGameConfig<Snapshot, Messages>;
+  snapshot: Snapshot;
+  onLeave(): void;
+  extras: ((snapshot: Snapshot, isHost: boolean) => ReactNode) | undefined;
+}) {
+  const { send, notice } = config.useStore();
   const [botLevel, setBotLevel] = useState<BotLevel>("normal");
   const [copied, setCopied] = useState(false);
   const me = snapshot.seats.find((s) => s.id === snapshot.you);
   const isHost = me?.isHost ?? false;
-  const full = snapshot.seats.length >= 10;
+  const full = snapshot.seats.length >= config.maxPlayers;
 
   const copyLink = async () => {
     await navigator.clipboard?.writeText(window.location.href).catch(() => {});
@@ -74,7 +110,7 @@ function Lobby({ snapshot, onLeave }: { snapshot: UnoRoomSnapshot; onLeave(): vo
         <Button variant="secondary" onClick={onLeave}>
           Leave
         </Button>
-        <h1 className="text-xl font-bold">Online Uno</h1>
+        <h1 className="text-xl font-bold">Online {config.title}</h1>
         <span className="w-16" />
       </header>
 
@@ -96,7 +132,7 @@ function Lobby({ snapshot, onLeave }: { snapshot: UnoRoomSnapshot; onLeave(): vo
 
       <section aria-labelledby="seats-heading" className="flex flex-col gap-2">
         <h2 id="seats-heading" className="text-lg font-bold">
-          Players ({snapshot.seats.length}/10)
+          Players ({snapshot.seats.length}/{config.maxPlayers})
         </h2>
         <ul className="flex flex-col gap-2">
           {snapshot.seats.map((seat) => (
@@ -137,7 +173,7 @@ function Lobby({ snapshot, onLeave }: { snapshot: UnoRoomSnapshot; onLeave(): vo
               value={botLevel}
               onChange={(e) => setBotLevel(e.target.value as BotLevel)}
             >
-              {UNO_BOT_LEVELS.map((level) => (
+              {config.botLevels.map((level) => (
                 <option key={level} value={level}>
                   {level}
                 </option>
@@ -154,33 +190,12 @@ function Lobby({ snapshot, onLeave }: { snapshot: UnoRoomSnapshot; onLeave(): vo
         )}
       </section>
 
-      <section aria-labelledby="rules-heading" className="flex flex-col gap-2">
-        <h2 id="rules-heading" className="text-lg font-bold">
-          House rules
-        </h2>
-        {HOUSE_RULES.map((rule) => (
-          <label key={rule.key} className="flex gap-3 rounded-xl bg-felt-800 p-3">
-            <input
-              type="checkbox"
-              className="mt-1 size-5 accent-amber-400"
-              checked={snapshot.options[rule.key]}
-              disabled={!isHost}
-              onChange={(e) =>
-                send("setOptions", { [rule.key]: e.target.checked } as Partial<UnoOptions>)
-              }
-            />
-            <span>
-              <span className="font-semibold">{rule.name}</span>
-              <span className="block text-sm text-white/70">{rule.description}</span>
-            </span>
-          </label>
-        ))}
-      </section>
+      {extras?.(snapshot, isHost)}
 
       {isHost ? (
         <Button
           className="text-lg"
-          disabled={snapshot.seats.length < 2}
+          disabled={snapshot.seats.length < config.minPlayers}
           onClick={() => send("start", {})}
         >
           Start game
@@ -189,48 +204,5 @@ function Lobby({ snapshot, onLeave }: { snapshot: UnoRoomSnapshot; onLeave(): vo
         <p className="text-center text-white/70">Waiting for the host to start the game…</p>
       )}
     </main>
-  );
-}
-
-function OnlineTable({ snapshot, onLeave }: { snapshot: UnoRoomSnapshot; onLeave(): void }) {
-  const { send, notice, reconnecting } = useOnlineStore();
-  const nameOf = (id: string) => snapshot.seats.find((s) => s.id === id)?.name ?? "Someone";
-  const isHost = snapshot.seats.find((s) => s.id === snapshot.you)?.isHost ?? false;
-  const { result, view } = snapshot;
-  if (!view) return null;
-
-  return (
-    <UnoTable
-      view={view}
-      legalMoves={snapshot.legalMoves}
-      moveCount={snapshot.moveCount}
-      log={snapshot.log}
-      players={snapshot.seats.map((s) => ({
-        id: s.id,
-        name: s.name,
-        isBot: s.kind === "bot",
-        connected: s.connected,
-      }))}
-      emptyHandMessage="Watching"
-      error={reconnecting ? "Connection lost, reconnecting…" : notice}
-      onMove={(move) => send("move", move)}
-      onLeave={onLeave}
-    >
-      {result && (
-        <GameOverDialog
-          winnerName={nameOf(result.winners[0]!)}
-          points={result.scores?.[result.winners[0]!] ?? 0}
-        >
-          {isHost ? (
-            <Button onClick={() => send("playAgain", {})}>Play again</Button>
-          ) : (
-            <p className="text-white/70">Waiting for the host to start another game…</p>
-          )}
-          <Button variant="secondary" onClick={onLeave}>
-            Leave room
-          </Button>
-        </GameOverDialog>
-      )}
-    </UnoTable>
   );
 }

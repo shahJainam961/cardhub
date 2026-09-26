@@ -14,7 +14,7 @@ const GAMES = [
     name: "Monopoly Deal",
     blurb: "Collect property sets and charge rent.",
     ready: true,
-    online: false,
+    online: true,
   },
   {
     id: "chess",

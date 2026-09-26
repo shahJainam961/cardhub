@@ -1,28 +1,32 @@
 import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from "@cardhub/shared";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { Button } from "../../../components/Button";
-import { readDebugParams } from "../../../lib/random";
-import { useOnlineStore } from "./onlineStore";
+import { Button } from "../components/Button";
+import { readDebugParams } from "../lib/random";
+import type { AnyMessages, AnySnapshot, OnlineGameConfig } from "./OnlineRoom";
 
 const CODE_CHARS = new RegExp(`[^${ROOM_CODE_ALPHABET}]`, "g");
 
-export function OnlinePage() {
+export function OnlinePage<Snapshot extends AnySnapshot, Messages extends AnyMessages>({
+  config,
+}: {
+  config: OnlineGameConfig<Snapshot, Messages>;
+}) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { createRoom, status, error } = useOnlineStore();
+  const { createRoom, status, error } = config.useStore();
   const [code, setCode] = useState("");
 
   const onCreate = async () => {
     const { botDelayMs } = readDebugParams(location.search);
     const created = await createRoom(botDelayMs === undefined ? {} : { botDelayMs });
-    if (created) navigate(`/uno/room/${created}`);
+    if (created) navigate(`${config.basePath}/room/${created}`);
   };
 
   return (
     <main className="mx-auto flex min-h-full max-w-md flex-col gap-6 px-4 py-8">
       <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-black">Play Uno online</h1>
+        <h1 className="text-3xl font-black">Play {config.title} online</h1>
         <Link to="/" className="text-sm text-white/70 underline">
           Home
         </Link>
@@ -46,7 +50,7 @@ export function OnlinePage() {
         className="flex flex-col gap-3 rounded-2xl bg-felt-800 p-4"
         onSubmit={(e) => {
           e.preventDefault();
-          navigate(`/uno/room/${code}`);
+          navigate(`${config.basePath}/room/${code}`);
         }}
       >
         <label htmlFor="room-code" className="text-lg font-bold">

@@ -5,11 +5,11 @@ const localEnv = new URL("../.env.local", import.meta.url);
 if (existsSync(localEnv)) process.loadEnvFile(localEnv);
 
 const { readConfig } = await import("./config");
-const { UnoRoom } = await import("./rooms/UnoRoom");
+const { GameRoom } = await import("./rooms/GameRoom");
 const { createServer } = await import("./app");
 
 const config = readConfig();
-UnoRoom.config = config;
+GameRoom.config = config;
 await createServer().listen(config.port);
 console.log(
   `cardhub game server listening on :${config.port} (${config.supabase ? "Supabase auth" : "dev mode, no auth"})`,

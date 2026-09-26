@@ -1,93 +1,35 @@
 import type { UnoMove } from "@cardhub/engine";
 import { UNO_ROOM, type UnoRoomSnapshot } from "@cardhub/shared";
-import type { Room as ClientRoom } from "@colyseus/sdk";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "../app";
-import { UnoRoom } from "./UnoRoom";
+import { track, type Player } from "../test/roomClient";
+import { GameRoom } from "./GameRoom";
 
 let colyseus: ColyseusTestServer;
 
 beforeAll(async () => {
-  UnoRoom.config = { port: 0, supabase: null };
+  GameRoom.config = { port: 0, supabase: null };
   colyseus = await boot(createServer());
 });
 afterEach(() => colyseus.cleanup());
 afterAll(() => colyseus.shutdown());
 
-/** A connected test player that records every snapshot and error it receives. */
-interface Player {
-  room: ClientRoom;
-  snapshots: UnoRoomSnapshot[];
-  errors: string[];
-  latest(): UnoRoomSnapshot;
-  /** Resolves with the next snapshot (or the current one) matching `predicate`. */
-  waitFor(predicate: (s: UnoRoomSnapshot) => boolean, timeoutMs?: number): Promise<UnoRoomSnapshot>;
-  waitForError(): Promise<string>;
-}
-
-function track(room: ClientRoom): Player {
-  const snapshots: UnoRoomSnapshot[] = [];
-  const errors: string[] = [];
-  const listeners = new Set<() => void>();
-  room.onMessage("snapshot", (s: UnoRoomSnapshot) => {
-    snapshots.push(s);
-    listeners.forEach((l) => l());
-  });
-  room.onMessage("error", (e: { message: string }) => {
-    errors.push(e.message);
-    listeners.forEach((l) => l());
-  });
-  const until = <T>(check: () => T | undefined, timeoutMs = 5_000) =>
-    new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        listeners.delete(listener);
-        reject(new Error("Timed out waiting for the server"));
-      }, timeoutMs);
-      const listener = () => {
-        const value = check();
-        if (value === undefined) return;
-        clearTimeout(timer);
-        listeners.delete(listener);
-        resolve(value);
-      };
-      listeners.add(listener);
-      listener();
-    });
-  return {
-    room,
-    snapshots,
-    errors,
-    latest: () => snapshots.at(-1)!,
-    // Checks the latest snapshot now and then each new one as it arrives, so it never
-    // matches a stale snapshot from earlier in the game.
-    waitFor: (predicate, timeoutMs) =>
-      until(() => {
-        const latest = snapshots.at(-1);
-        return latest && predicate(latest) ? latest : undefined;
-      }, timeoutMs),
-    waitForError: () => {
-      const seen = errors.length;
-      return until(() => errors[seen]);
-    },
-  };
-}
-
 async function createRoom(name: string, options: Record<string, unknown> = {}) {
   const room = await colyseus.sdk.create(UNO_ROOM, { devName: name, botDelayMs: 0, ...options });
-  const player = track(room);
+  const player = track<UnoRoomSnapshot>(room);
   await player.waitFor(() => true);
   return player;
 }
 
 async function joinRoom(code: string, name: string) {
-  const player = track(await colyseus.sdk.joinById(code, { devName: name }));
+  const player = track<UnoRoomSnapshot>(await colyseus.sdk.joinById(code, { devName: name }));
   await player.waitFor(() => true);
   return player;
 }
 
 /** Plays for this player whenever it is their turn: first playable card, else draw, else pass. */
-function autoplay(player: Player) {
+function autoplay(player: Player<UnoRoomSnapshot>) {
   player.room.onMessage("snapshot", (s: UnoRoomSnapshot) => {
     if (s.phase !== "playing" || s.view?.currentPlayer !== s.you) return;
     const move: UnoMove | undefined =
