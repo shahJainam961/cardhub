@@ -1,0 +1,45 @@
+name: Smoke tests
+
+# Quick end-to-end checks against the live site: after every release (called from CI),
+# every day, and on demand from the Actions tab. GitHub emails you when a run fails.
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * *" # daily, 06:17 UTC
+
+permissions:
+  contents: read
+
+env:
+  E2E_BASE_URL: https://cardhub.pages.dev
+
+jobs:
+  smoke:
+    name: Smoke tests on the live site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm --filter @cardhub/e2e exec playwright install --with-deps chromium
+      - run: pnpm test:smoke
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

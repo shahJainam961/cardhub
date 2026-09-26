@@ -71,3 +71,74 @@ jobs:
             e2e/playwright-report
             e2e/test-results
           retention-days: 7
+
+  # Releases only happen from main, and only after every test above has passed.
+  deploy:
+    name: Deploy to production
+    needs: [checks, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Never run two deploys at once; a newer one waits instead of cancelling a release midway.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      # Public by design: shipped to every browser, data protected by RLS.
+      VITE_SUPABASE_URL: https://qdntxnheuoblvfbtscjy.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_Chk0rBPhWXOe2s-qAp4Kgw_uayIjvAG
+      VITE_GAME_SERVER_URL: https://cardhub-game-server.onrender.com
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check deploy secrets are set
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          missing=0
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID RENDER_DEPLOY_HOOK_URL; do
+            if [ -z "${!name}" ]; then echo "::error::Repository secret $name is not set"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Build website
+        run: pnpm build
+
+      - name: Deploy website to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Creates the Pages project on the first release; afterwards it already exists.
+          npx --yes wrangler@4 pages project create cardhub --production-branch main || true
+          npx --yes wrangler@4 pages deploy apps/web/dist --project-name cardhub --branch main \
+            --commit-hash "$GITHUB_SHA" --commit-message "$(git log -1 --format=%s)"
+
+      - name: Deploy game server on Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL" > /dev/null
+
+      - name: Wait for the new game server to go live
+        run: |
+          for attempt in $(seq 1 60); do
+            live=$(curl -fsS --max-time 60 https://cardhub-game-server.onrender.com/version | jq -r .commit || true)
+            if [ "$live" = "$GITHUB_SHA" ]; then echo "Game server is running $live"; exit 0; fi
+            echo "Live commit: ${live:-unreachable}; waiting for $GITHUB_SHA ($attempt/60)"
+            sleep 15
+          done
+          echo "::error::The game server did not switch to $GITHUB_SHA within 15 minutes"
+          exit 1
+
+  smoke:
+    name: Post-release smoke tests
+    needs: deploy
+    uses: ./.github/workflows/smoke.yml
