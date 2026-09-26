@@ -66,7 +66,7 @@ function LocalDealTable({ game }: { game: LocalDealGame }) {
     >
       {handoff && (
         <Overlay title={`Pass the device to ${nameOf(handoff)}${handoffReason}`}>
-          <p className="mb-4 text-white/70">Everyone else, look away!</p>
+          <p className="mb-4 font-bold text-ink/70">Everyone else, look away!</p>
           <Button className="w-full" onClick={() => reveal(handoff)}>
             I&apos;m {nameOf(handoff)}, show my cards
           </Button>
@@ -76,7 +76,7 @@ function LocalDealTable({ game }: { game: LocalDealGame }) {
         <Overlay
           title={result.outcome === "win" ? `${nameOf(result.winners[0]!)} wins!` : "It's a draw"}
         >
-          <p className="mb-4 text-white/70">
+          <p className="mb-4 font-bold text-ink/70">
             {result.outcome === "win"
               ? "Three complete sets of different colors."
               : "No cards were left to play."}

@@ -1,4 +1,5 @@
 import { motion, MotionConfig } from "motion/react";
+import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import { AccountPage } from "./account/AccountPage";
 import { MonopolyDealGamePage } from "./games/monopoly-deal/MonopolyDealGamePage";
@@ -23,6 +24,10 @@ export function App() {
 /** Each page slides up into place as you arrive (no exit animation, so navigation never waits). */
 function AnimatedRoutes() {
   const location = useLocation();
+  // Start every page at the top (e.g. the table shouldn't keep the setup page's scroll).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   return (
     <motion.div
       key={location.pathname}

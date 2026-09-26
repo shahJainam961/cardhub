@@ -10,6 +10,16 @@ async function tryClick(locator: Locator): Promise<boolean> {
   }
 }
 
+/** Focuses and presses Enter, if the element is ready soon. */
+async function tryPress(locator: Locator): Promise<boolean> {
+  try {
+    await locator.press("Enter", { timeout: 1_000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Plays for every human on this device until the game ends: handles handoffs, pickers,
  * calls UNO, plays the first playable card, otherwise draws or passes.
@@ -46,7 +56,9 @@ export async function playUntilGameOver(page: Page, timeoutMs = 100_000): Promis
       ) {
         await tryClick(unoButton);
       }
-      await tryClick(playable.first());
+      // Hand cards are fanned (rotated and overlapping), so aiming a click at a point is
+      // unreliable; play with the keyboard instead, which also checks the hand is keyboard-usable.
+      await tryPress(playable.first());
       continue;
     }
     const draw = page.getByRole("button", { name: /^Draw/ });

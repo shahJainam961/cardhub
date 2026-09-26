@@ -1,23 +1,33 @@
 import { isWild, type UnoCard, type UnoColor } from "@cardhub/engine";
 import { cardLabel } from "@cardhub/shared";
+import { motion, type MotionStyle } from "motion/react";
 
-export const COLOR_BG: Record<UnoColor, string> = {
-  red: "bg-red-600 text-white",
-  yellow: "bg-yellow-400 text-slate-900",
-  green: "bg-green-600 text-white",
-  blue: "bg-blue-600 text-white",
+/** Card face colors, tuned to be bright but readable under an ink outline. */
+export const UNO_HEX: Record<UnoColor, string> = {
+  red: "#ff4d5e",
+  yellow: "#ffd23f",
+  green: "#2ed3a0",
+  blue: "#4c8dff",
 };
 
-const WILD_BG =
-  "bg-[conic-gradient(var(--color-red-600)_0_25%,var(--color-yellow-400)_0_50%,var(--color-green-600)_0_75%,var(--color-blue-600)_0)] text-white";
+/** Kept for places that color small UI bits (e.g. the color picker). */
+export const COLOR_BG: Record<UnoColor, string> = {
+  red: "bg-[#ff4d5e] text-white",
+  yellow: "bg-[#ffd23f] text-ink",
+  green: "bg-[#2ed3a0] text-ink",
+  blue: "bg-[#4c8dff] text-white",
+};
 
-const SYMBOLS = { skip: "⊘", reverse: "⇄", drawTwo: "+2", wild: "W", wildDrawFour: "+4" } as const;
+const SYMBOLS = { skip: "⊘", reverse: "⇄", drawTwo: "+2", wild: "★", wildDrawFour: "+4" } as const;
 
 const SIZES = {
-  sm: "h-16 w-11 text-lg rounded-lg",
-  md: "h-24 w-16 text-2xl rounded-xl",
-  lg: "h-32 w-22 text-4xl rounded-2xl",
+  sm: { box: "h-16 w-11 rounded-lg border-2", center: "text-xl", corner: "text-[0.55rem]" },
+  md: { box: "h-28 w-20 rounded-xl border-[3px]", center: "text-4xl", corner: "text-xs" },
+  lg: { box: "h-36 w-26 rounded-2xl border-[3px]", center: "text-5xl", corner: "text-sm" },
 } as const;
+
+const WILD_FACE =
+  "conic-gradient(from 45deg, #ff4d5e 0 25%, #ffd23f 0 50%, #2ed3a0 0 75%, #4c8dff 0)";
 
 function face(card: UnoCard): string {
   return card.kind === "number" ? String(card.value) : SYMBOLS[card.kind];
@@ -29,50 +39,129 @@ interface UnoCardViewProps {
   /** Renders a button; `playable` controls whether it is enabled and highlighted. */
   onClick?: () => void;
   playable?: boolean;
+  /** Your turn but this card can't be played: fade it slightly so playable cards stand out. */
+  dimmed?: boolean;
+  /** Shared-layout id so the card can fly between hand and pile. */
+  layoutId?: string;
+  style?: MotionStyle;
+  className?: string;
 }
 
-export function UnoCardView({ card, size = "md", onClick, playable = false }: UnoCardViewProps) {
-  const colors = isWild(card) ? WILD_BG : COLOR_BG[card.color];
-  const base = `${SIZES[size]} ${colors} relative flex shrink-0 items-center justify-center border-4 border-white font-black shadow-lg select-none`;
-  const content = (
-    <span className="flex h-3/5 w-4/5 items-center justify-center rounded-[50%] bg-white/90 text-slate-900 [text-shadow:none]">
-      {face(card)}
-    </span>
+/** Our own sticker-style card: ink outline, tilted center oval, big outlined symbol, corner marks. */
+export function UnoCardView({
+  card,
+  size = "md",
+  onClick,
+  playable = false,
+  dimmed = false,
+  layoutId,
+  style,
+  className = "",
+}: UnoCardViewProps) {
+  const s = SIZES[size];
+  const wild = isWild(card);
+  const background = wild ? "#1f1a4d" : UNO_HEX[card.color];
+  const ink = !wild && (card.color === "yellow" || card.color === "green") ? "#1f1a4d" : "white";
+  const symbol = face(card);
+
+  const body = (
+    <>
+      <span
+        className={`absolute top-1 left-1.5 font-display font-bold ${s.corner}`}
+        style={{ color: ink }}
+      >
+        {symbol}
+      </span>
+      <span
+        className={`absolute right-1.5 bottom-1 rotate-180 font-display font-bold ${s.corner}`}
+        style={{ color: ink }}
+      >
+        {symbol}
+      </span>
+      <span
+        className="flex h-[70%] w-[82%] -rotate-[22deg] items-center justify-center rounded-[50%] border-2 border-ink"
+        style={{ background: wild ? WILD_FACE : "white" }}
+      >
+        <span
+          className={`rotate-[22deg] font-display font-bold ${s.center}`}
+          style={{
+            color: wild ? "white" : background,
+            WebkitTextStroke: "1.5px #1f1a4d",
+            paintOrder: "stroke fill",
+            textShadow: "2px 2px 0 #1f1a4d",
+          }}
+        >
+          {symbol}
+        </span>
+      </span>
+    </>
   );
+
+  const base = `relative flex shrink-0 items-center justify-center border-ink shadow-[2px_3px_0_#1f1a4d] select-none ${s.box} ${className}`;
 
   if (!onClick) {
     return (
-      <div className={base} role="img" aria-label={cardLabel(card)}>
-        {content}
-      </div>
+      <motion.div
+        {...(layoutId ? { layoutId } : {})}
+        className={base}
+        style={{ background, ...style }}
+        role="img"
+        aria-label={cardLabel(card)}
+      >
+        {body}
+      </motion.div>
     );
   }
   return (
-    <button
+    <motion.button
+      {...(layoutId ? { layoutId } : {})}
       type="button"
-      className={`${base} transition-transform ${
-        playable
-          ? "cursor-pointer ring-4 ring-amber-300 hover:-translate-y-3 focus-visible:-translate-y-3"
-          : "cursor-not-allowed opacity-50"
-      }`}
+      className={`${base} ${playable ? "cursor-pointer" : "cursor-default"} ${dimmed ? "opacity-60" : ""}`}
+      style={{ background, ...style }}
       onClick={onClick}
       disabled={!playable}
       aria-label={cardLabel(card)}
       data-testid="hand-card"
       data-playable={playable}
+      whileHover={playable ? { y: -18, rotate: 0, scale: 1.06, zIndex: 20 } : {}}
+      whileTap={playable ? { scale: 0.96 } : {}}
     >
-      {content}
-    </button>
+      {body}
+    </motion.button>
   );
 }
 
-export function UnoCardBack({ size = "md" }: { size?: keyof typeof SIZES }) {
+/** The back of a card: ink with a bright cardhub badge. */
+export function UnoCardBack({
+  size = "md",
+  className = "",
+  style,
+}: {
+  size?: keyof typeof SIZES;
+  className?: string;
+  style?: MotionStyle;
+}) {
+  const s = SIZES[size];
   return (
-    <div
-      className={`${SIZES[size]} flex shrink-0 items-center justify-center border-4 border-white bg-slate-900 font-black text-red-500 italic shadow-lg`}
+    <motion.div
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden border-ink bg-ink shadow-[2px_3px_0_#1f1a4d] ${s.box} ${className}`}
+      {...(style ? { style } : {})}
       aria-hidden
     >
-      <span className="-rotate-12 text-[0.6em]">UNO</span>
-    </div>
+      <span className="absolute inset-1 rounded-[inherit] border-2 border-dashed border-white/25" />
+      {size === "sm" ? (
+        // Too small for the logo: just the bright oval.
+        <span className="h-[55%] w-[70%] -rotate-[22deg] rounded-[50%] bg-gradient-to-br from-bubblegum to-grape" />
+      ) : (
+        <span
+          className={`flex h-[62%] w-[80%] -rotate-[22deg] items-center justify-center rounded-[50%] border-2 border-white ${s.corner}`}
+          style={{ background: "linear-gradient(135deg, #ff5fa2, #7b5cff)" }}
+        >
+          <span className="rotate-[22deg] font-display text-[1.15em] font-bold text-white">
+            cardhub
+          </span>
+        </span>
+      )}
+    </motion.div>
   );
 }

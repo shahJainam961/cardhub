@@ -8,7 +8,10 @@ import {
   type PlayerId,
 } from "@cardhub/engine";
 import { COLOR_NAMES, dealCardLabel } from "@cardhub/shared";
+import { motion } from "motion/react";
 import { useState, type ReactNode } from "react";
+import { AudioToggles } from "../../../components/AudioToggles";
+import { Avatar } from "../../../components/Avatar";
 import { Button } from "../../../components/Button";
 import { Overlay } from "../../../components/Overlay";
 import {
@@ -19,7 +22,7 @@ import {
   type NameOf,
 } from "../moveOptions";
 import { DealCardView } from "./DealCardView";
-import { PropertySets } from "./PropertySets";
+import { TableCards } from "./TableCards";
 
 export interface DealTablePlayer {
   id: PlayerId;
@@ -119,78 +122,111 @@ export function DealTable({
   const opponents = view.players.filter((p) => p.id !== me);
 
   return (
-    <main className="safe-area mx-auto flex min-h-full max-w-5xl flex-col gap-3 px-4 py-3">
+    <main className="safe-area mx-auto flex min-h-full max-w-5xl flex-col gap-3 px-3 py-3">
       <header className="flex items-center justify-between gap-2">
-        <Button variant="secondary" onClick={onLeave}>
+        <Button variant="ghost" className="!min-h-11 !px-4" onClick={onLeave}>
           Leave
         </Button>
-        <p className="text-center text-base font-bold" role="status" data-testid="status">
+        <motion.p
+          key={status}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className={`rounded-full border-[2.5px] border-ink px-4 py-1.5 text-center font-display text-base font-semibold shadow-[2px_3px_0_var(--color-ink)] ${
+            myTurnToAct && !view.winner ? "bg-sunny" : "bg-white"
+          }`}
+          role="status"
+          data-testid="status"
+        >
           {status}
-        </p>
-        {choosingPlay && canEndTurn ? (
-          <Button onClick={() => play({ type: "endTurn" })}>End turn</Button>
-        ) : (
-          <span className="w-20" />
-        )}
+        </motion.p>
+        <div className="flex items-center gap-2">
+          <AudioToggles />
+          {choosingPlay && canEndTurn && (
+            <Button
+              variant="success"
+              className="!min-h-11"
+              onClick={() => play({ type: "endTurn" })}
+            >
+              End turn
+            </Button>
+          )}
+        </div>
       </header>
 
-      <ul className="flex flex-col gap-2" aria-label="Players">
+      <ul className="flex flex-col gap-3" aria-label="Players">
         {opponents.map((p) => {
           const info = players.find((x) => x.id === p.id);
-          const active = p.id === view.awaiting;
+          const active = p.id === view.awaiting && !view.winner;
           return (
             <li
               key={p.id}
-              className={`rounded-xl px-3 py-2 ring-2 ${active ? "bg-amber-400/15 ring-amber-300" : "bg-felt-800 ring-transparent"} ${info?.connected === false ? "opacity-60" : ""}`}
+              className={`rounded-3xl border-[2.5px] p-3 ${
+                active
+                  ? "border-ink bg-sunny/90 shadow-[3px_4px_0_var(--color-ink)]"
+                  : "border-transparent bg-white/85"
+              } ${info?.connected === false ? "opacity-60" : ""}`}
               data-testid={`opponent-${nameOf(p.id)}`}
             >
-              <div className="mb-1 flex flex-wrap items-baseline gap-x-3 text-sm">
-                <span className="font-semibold">
-                  {nameOf(p.id)}
-                  {info?.isBot && <span className="ml-1 text-xs text-white/60">bot</span>}
-                  {info?.connected === false && (
-                    <span className="ml-1 text-xs text-amber-300">reconnecting…</span>
-                  )}
+              <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <Avatar
+                  name={nameOf(p.id)}
+                  isBot={info?.isBot ?? false}
+                  size="sm"
+                  active={active}
+                />
+                <span className="font-display text-lg font-semibold">{nameOf(p.id)}</span>
+                <span className="rounded-full bg-ink/10 px-2 text-xs font-bold">
+                  🂠 {p.handCount} in hand
                 </span>
-                <span className="text-white/70">{p.handCount} in hand</span>
-                <span className="text-white/70">Bank {bankTotal(p.table.bank)}M</span>
+                {info?.connected === false && (
+                  <span className="text-xs font-bold text-tangerine">reconnecting…</span>
+                )}
               </div>
-              <PropertySets table={p.table} compact />
+              <TableCards table={p.table} />
             </li>
           );
         })}
       </ul>
 
-      <section className="flex flex-col items-center gap-2 text-sm" aria-label="Table">
-        <p className="text-white/70">
-          {view.drawPileCount} in draw pile
+      <section className="flex flex-col items-center gap-1 text-sm" aria-label="Table">
+        <p className="rounded-full border-2 border-ink bg-white px-3 py-0.5 font-bold">
+          🂠 {view.drawPileCount} in draw pile
           {view.topDiscard && <> · last played: {dealCardLabel(view.topDiscard)}</>}
         </p>
         <ol
-          className="min-h-14 w-full max-w-xl text-center text-white/85"
+          className="min-h-12 w-full max-w-xl text-center font-bold text-white [text-shadow:1px_1px_0_var(--color-ink)]"
           aria-live="polite"
           data-testid="game-log"
         >
-          {log.slice(-3).map((entry, i) => (
-            <li key={`${moveCount}-${i}`}>{entry}</li>
+          {log.slice(-3).map((entry, i, shown) => (
+            <li
+              key={`${moveCount}-${i}`}
+              className={i === shown.length - 1 ? "text-base" : "opacity-75"}
+            >
+              {entry}
+            </li>
           ))}
         </ol>
       </section>
 
       {mine ? (
-        <section aria-label="Your area" className="flex flex-col gap-2 rounded-xl bg-black/20 p-3">
-          <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="font-semibold">{nameOf(mine.id)}</span>
-            <span className="text-sm text-white/70" data-testid="my-bank">
+        <section aria-label="Your area" className="panel flex flex-col gap-3 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Avatar name={nameOf(mine.id)} size="sm" active={myTurnToAct && !view.winner} />
+            <span className="font-display text-lg font-semibold">{nameOf(mine.id)}</span>
+            <span className="sr-only" data-testid="my-bank">
               Bank {bankTotal(mine.table.bank)}M
             </span>
           </div>
-          <PropertySets
+          <TableCards
             table={mine.table}
             tappable={choosingPlay ? recolorable : new Set()}
             onTap={(cardId) => setSheet({ kind: "wild", cardId, moveCount })}
           />
-          <div className="flex gap-2 overflow-x-auto pt-3 pb-1" aria-label="Your hand">
+          <div
+            className="flex gap-2 overflow-x-auto border-t-2 border-dashed border-ink/20 px-1 pt-4 pb-2"
+            aria-label="Your hand"
+          >
             {view.hand.map((card) => (
               <DealCardView
                 key={card.id}
@@ -203,12 +239,14 @@ export function DealTable({
           </div>
         </section>
       ) : (
-        <p className="text-center text-white/70">{emptyHandMessage}</p>
+        <p className="text-center font-display text-xl text-white [text-shadow:1px_1px_0_var(--color-ink)]">
+          {emptyHandMessage}
+        </p>
       )}
 
       {error && (
         <p
-          className="fixed inset-x-4 bottom-4 z-40 rounded-xl bg-red-600 p-3 text-center"
+          className="fixed inset-x-4 bottom-4 z-40 rounded-2xl border-[3px] border-ink bg-cherry p-3 text-center font-bold text-white shadow-[3px_4px_0_var(--color-ink)]"
           role="alert"
         >
           {error}
@@ -262,7 +300,7 @@ export function DealTable({
 
       {myTurnToAct && pending && !pending.paying && (
         <Overlay title={pending.justSayNos % 2 === 1 ? "Just Say No!" : "Action against you"}>
-          <p className="mb-4 text-white/85">{describePending(pending, me, nameOf, view)}</p>
+          <p className="mb-4 text-ink/80">{describePending(pending, me, nameOf, view)}</p>
           <div className="flex flex-col gap-2">
             {legalMoves.some((m) => m.type === "justSayNo") && (
               <Button onClick={() => play(legalMoves.find((m) => m.type === "justSayNo")!)}>
@@ -370,9 +408,7 @@ function CardOptions({
         </div>
       )}
       {card.kind === "action" && card.action === "doubleRent" && (
-        <p className="text-sm text-white/70">
-          Play it together with a rent card: tap the rent card.
-        </p>
+        <p className="text-sm text-ink/60">Play it together with a rent card: tap the rent card.</p>
       )}
       <Button variant="secondary" className="mt-3 w-full" onClick={onClose}>
         Cancel
@@ -406,7 +442,7 @@ function PayDialog({
 
   return (
     <Overlay title={`Pay ${to} ${amount}M`}>
-      <p className="mb-3 text-sm text-white/70">
+      <p className="mb-3 text-sm text-ink/60">
         Choose cards from your bank and properties. No change is given.
       </p>
       <div className="flex flex-wrap justify-center gap-2" aria-label="Cards you can pay with">
@@ -417,7 +453,7 @@ function PayDialog({
               selected={selected.includes(card.id)}
               onClick={() => toggle(card.id)}
             />
-            <span className="text-[0.6rem] text-white/60">{source}</span>
+            <span className="text-[0.6rem] text-ink/50">{source}</span>
           </div>
         ))}
       </div>
@@ -428,7 +464,7 @@ function PayDialog({
         Pay
       </Button>
       {!valid && selected.length > 0 && total >= amount && (
-        <p className="mt-2 text-xs text-amber-300">Remove cards you don't need.</p>
+        <p className="mt-2 text-xs text-cherry">Remove cards you don't need.</p>
       )}
     </Overlay>
   );
@@ -448,7 +484,7 @@ function DiscardDialog({
     setSelected((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
   return (
     <Overlay title={`Discard ${count} card${count === 1 ? "" : "s"}`}>
-      <p className="mb-3 text-sm text-white/70">
+      <p className="mb-3 text-sm text-ink/60">
         You can keep at most 7 cards at the end of your turn.
       </p>
       <div className="flex flex-wrap justify-center gap-2">

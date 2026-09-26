@@ -87,7 +87,7 @@ function UnoOnlineTable({ snapshot, onLeave }: { snapshot: UnoRoomSnapshot; onLe
           {isHost ? (
             <Button onClick={() => send("playAgain", {})}>Play again</Button>
           ) : (
-            <p className="text-white/70">Waiting for the host to start another game…</p>
+            <p className="font-bold text-ink/70">Waiting for the host to start another game…</p>
           )}
           <Button variant="secondary" onClick={onLeave}>
             Leave room

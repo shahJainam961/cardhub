@@ -61,7 +61,7 @@ function LocalUnoTable({ game }: { game: LocalUnoGame }) {
     >
       {handoff && (
         <Overlay title={`Pass the device to ${nameOf(handoff)}`}>
-          <p className="mb-4 text-white/70">Everyone else, look away!</p>
+          <p className="mb-4 font-bold text-ink/70">Everyone else, look away!</p>
           <Button className="w-full" onClick={() => reveal(handoff)}>
             I&apos;m {nameOf(handoff)}, show my hand
           </Button>

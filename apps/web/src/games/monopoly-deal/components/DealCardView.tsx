@@ -1,5 +1,6 @@
 import { colorsOf, DEAL_COLORS, type DealCard } from "@cardhub/engine";
 import { ACTION_NAMES, COLOR_NAMES, dealCardLabel } from "@cardhub/shared";
+import { motion } from "motion/react";
 import { COLOR_HEX, COLOR_TEXT } from "../colors";
 
 const ACTION_TEXT = {
@@ -15,10 +16,40 @@ const ACTION_TEXT = {
   doubleRent: "Play with a rent card",
 } as const;
 
+const ACTION_ICON = {
+  dealBreaker: "💥",
+  justSayNo: "✋",
+  slyDeal: "🕵️",
+  forcedDeal: "🔄",
+  debtCollector: "💸",
+  birthday: "🎂",
+  passGo: "➡️",
+  house: "🏠",
+  hotel: "🏨",
+  doubleRent: "✖️2",
+} as const;
+
 function stripes(colors: readonly string[]): string {
   const step = 100 / colors.length;
   return `linear-gradient(90deg, ${colors.map((c, i) => `${c} ${i * step}% ${(i + 1) * step}%`).join(", ")})`;
 }
+
+const SIZES = {
+  sm: {
+    box: "h-16 w-11 rounded-md border-2",
+    header: "h-3.5",
+    title: "text-[0.5rem]",
+    icon: "text-sm",
+    value: "text-[0.5rem] px-0.5",
+  },
+  md: {
+    box: "h-28 w-20 rounded-xl border-[2.5px]",
+    header: "h-6",
+    title: "text-[0.72rem]",
+    icon: "text-2xl",
+    value: "text-[0.65rem] px-1",
+  },
+} as const;
 
 interface DealCardViewProps {
   card: DealCard;
@@ -27,24 +58,34 @@ interface DealCardViewProps {
   active?: boolean;
   selected?: boolean;
   disabled?: boolean;
+  /** "sm" for cards laid on a table (banks and property stacks). */
+  size?: keyof typeof SIZES;
+  className?: string;
 }
 
-/** A Monopoly Deal card: colored header, name, and its bank value in the corner. */
+/** A Monopoly Deal card, sticker style: colored band, icon or name, bank value in the corner. */
 export function DealCardView({
   card,
   onClick,
   active = false,
   selected = false,
   disabled = false,
+  size = "md",
+  className = "",
 }: DealCardViewProps) {
+  const s = SIZES[size];
+  const small = size === "sm";
   let header: string;
-  let headerText = "#0f172a";
+  let headerText = "#1f1a4d";
   let title = dealCardLabel(card);
   let subtitle = "";
+  let icon: string | null = null;
+  let face = "white";
 
   switch (card.kind) {
     case "money":
-      header = "#bbf7d0";
+      header = "#2ed3a0";
+      face = "#d9fbe9";
       title = `${card.value}M`;
       subtitle = "Money";
       break;
@@ -72,51 +113,75 @@ export function DealCardView({
               .join(" / ")}, everyone`;
       break;
     case "action":
-      header = "#fecdd3";
+      header = "#ff5fa2";
+      face = "#fff0f6";
       title = ACTION_NAMES[card.action];
       subtitle = ACTION_TEXT[card.action];
+      icon = ACTION_ICON[card.action];
       break;
   }
 
   const body = (
     <>
-      <span className="h-5 w-full rounded-t-md" style={{ background: header, color: headerText }} />
-      <span className="flex flex-1 flex-col items-center justify-center px-1 text-center">
-        <span className="text-[0.7rem] leading-tight font-bold break-words hyphens-auto">
+      <span
+        className={`w-full shrink-0 border-b-2 border-ink ${s.header}`}
+        style={{ background: header, color: headerText }}
+      />
+      <span className="flex flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-center">
+        {icon && (
+          <span className={s.icon} aria-hidden>
+            {icon}
+          </span>
+        )}
+        <span
+          className={`leading-tight font-extrabold break-words hyphens-auto ${s.title} ${card.kind === "money" ? (small ? "font-display text-[1.2em]" : "font-display text-[1.6em]") : ""}`}
+        >
           {title}
         </span>
-        <span className="mt-0.5 text-[0.55rem] leading-tight text-slate-500">{subtitle}</span>
+        {!small && subtitle && (
+          <span className="text-[0.55rem] leading-tight font-semibold text-ink/55">{subtitle}</span>
+        )}
       </span>
-      {card.value > 0 && (
-        <span className="absolute top-0.5 left-1 rounded-full bg-white/90 px-1 text-[0.6rem] font-black text-slate-900">
+      {card.value > 0 && (small || card.kind !== "money") && (
+        <span
+          className={`absolute top-0.5 left-0.5 rounded-full border border-ink bg-white font-black text-ink ${s.value}`}
+        >
           {card.value}M
         </span>
       )}
     </>
   );
-  const base = `relative flex h-24 w-16 shrink-0 flex-col overflow-hidden rounded-lg bg-white text-slate-900 shadow-md ${
-    selected ? "ring-4 ring-amber-400 -translate-y-2" : active ? "ring-2 ring-amber-300" : ""
-  }`;
+  const base = `relative flex shrink-0 flex-col overflow-hidden border-ink text-ink shadow-[2px_3px_0_var(--color-ink)] select-none ${s.box} ${
+    selected ? "-translate-y-2 ring-4 ring-sunny" : active ? "ring-4 ring-sunny" : ""
+  } ${className}`;
 
   if (!onClick) {
     return (
-      <div className={base} role="img" aria-label={dealCardLabel(card)}>
+      <div
+        className={base}
+        style={{ background: face }}
+        role="img"
+        aria-label={dealCardLabel(card)}
+      >
         {body}
       </div>
     );
   }
   return (
-    <button
+    <motion.button
       type="button"
-      className={`${base} transition-transform enabled:cursor-pointer enabled:hover:-translate-y-1 disabled:opacity-50`}
+      className={`${base} enabled:cursor-pointer disabled:opacity-60`}
+      style={{ background: face }}
       onClick={onClick}
       disabled={disabled}
       aria-label={dealCardLabel(card)}
       aria-pressed={selected}
       data-testid="deal-card"
       data-active={active}
+      whileHover={disabled ? {} : { y: -10, scale: 1.05 }}
+      whileTap={disabled ? {} : { scale: 0.95 }}
     >
       {body}
-    </button>
+    </motion.button>
   );
 }

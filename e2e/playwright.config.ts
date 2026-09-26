@@ -19,6 +19,9 @@ export default defineConfig({
   reporter: isCI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL,
+    // Full games run with the OS "reduce motion" setting (which the app honors), so Playwright
+    // doesn't wait on every animation; animations themselves are covered by motion.spec.ts.
+    reducedMotion: "reduce",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

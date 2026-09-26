@@ -71,7 +71,7 @@ function DealOnlineTable({ snapshot, onLeave }: { snapshot: DealRoomSnapshot; on
         <Overlay
           title={result.outcome === "win" ? `${nameOf(result.winners[0]!)} wins!` : "It's a draw"}
         >
-          <p className="mb-4 text-white/70">
+          <p className="mb-4 font-bold text-ink/70">
             {result.outcome === "win"
               ? "Three complete sets of different colors."
               : "No cards were left to play."}
@@ -80,7 +80,7 @@ function DealOnlineTable({ snapshot, onLeave }: { snapshot: DealRoomSnapshot; on
             {isHost ? (
               <Button onClick={() => send("playAgain", {})}>Play again</Button>
             ) : (
-              <p className="text-white/70">Waiting for the host to start another game…</p>
+              <p className="font-bold text-ink/70">Waiting for the host to start another game…</p>
             )}
             <Button variant="secondary" onClick={onLeave}>
               Leave room
