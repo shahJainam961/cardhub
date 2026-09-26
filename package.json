@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "pnpm --filter @cardhub/e2e test",
+    "test:smoke": "pnpm --filter @cardhub/e2e test:smoke",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
