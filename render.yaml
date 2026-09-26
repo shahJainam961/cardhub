@@ -1,0 +1,24 @@
+# Render blueprint for the game server (https://render.com/docs/blueprint-spec).
+# The website is hosted separately on Cloudflare Pages.
+services:
+  - type: web
+    name: cardhub-game-server
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: .
+    # Installs only the server and the workspace packages it uses.
+    buildCommand: npm install -g pnpm@10.24.0 && pnpm install --frozen-lockfile --filter @cardhub/server...
+    # No pnpm at runtime: run the TypeScript entry point with tsx directly.
+    startCommand: cd apps/server && ./node_modules/.bin/tsx src/index.ts
+    healthCheckPath: /
+    # Deploy only after the GitHub CI checks pass on main.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # Both values are public by design (the database is protected by RLS).
+      - key: SUPABASE_URL
+        value: https://qdntxnheuoblvfbtscjy.supabase.co
+      - key: SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_Chk0rBPhWXOe2s-qAp4Kgw_uayIjvAG
