@@ -2,3 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
   - "e2e"
+
+# pnpm 10 blocks dependency install scripts by default; the Supabase CLI needs one to download its binary.
+onlyBuiltDependencies:
+  - supabase

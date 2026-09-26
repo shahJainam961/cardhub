@@ -2,6 +2,7 @@ import { BOT_LEVELS, type BotLevel } from "@cardhub/bots";
 import { uno, type UnoOptions } from "@cardhub/engine";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
+import { useAuthStore } from "../../account/authStore";
 import { Button } from "../../components/Button";
 import { readDebugParams } from "../../lib/random";
 import type { Seat } from "./localGame";
@@ -40,8 +41,8 @@ const newSeat = (kind: Seat["kind"], name: string, level: BotLevel = "normal"): 
   level,
 });
 
-const defaultSeats = () => [
-  newSeat("human", "You"),
+const defaultSeats = (myName: string) => [
+  newSeat("human", myName),
   newSeat("bot", "Bot 1"),
   newSeat("bot", "Bot 2"),
 ];
@@ -50,7 +51,9 @@ export function UnoSetupPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { lastSetup, start } = useUnoStore();
-  const [seats, setSeats] = useState<Seat[]>(() => lastSetup?.seats ?? defaultSeats());
+  const [seats, setSeats] = useState<Seat[]>(
+    () => lastSetup?.seats ?? defaultSeats(useAuthStore.getState().account?.displayName ?? "You"),
+  );
   const [options, setOptions] = useState<Partial<UnoOptions>>(() => lastSetup?.options ?? {});
 
   const update = (id: string, patch: Partial<Seat>) =>

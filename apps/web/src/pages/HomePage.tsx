@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { AccountBadge } from "../account/AccountBadge";
 
 const GAMES = [
   {
@@ -19,9 +20,14 @@ const GAMES = [
 export function HomePage() {
   return (
     <main className="mx-auto flex min-h-full max-w-3xl flex-col gap-8 px-4 py-10">
-      <header>
-        <h1 className="text-4xl font-black tracking-tight">cardhub</h1>
-        <p className="mt-2 text-white/70">Play card games with friends or against the computer.</p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black tracking-tight">cardhub</h1>
+          <p className="mt-2 text-white/70">
+            Play card games with friends or against the computer.
+          </p>
+        </div>
+        <AccountBadge />
       </header>
       <ul className="grid gap-4 sm:grid-cols-3">
         {GAMES.map((game) => (
