@@ -12,7 +12,12 @@ beforeAll(async () => {
   GameRoom.config = { port: 0, supabase: null };
   colyseus = await boot(createServer());
 });
-afterEach(() => colyseus.cleanup());
+afterEach(() => {
+  GameRoom.seedForTests = null;
+  return colyseus.cleanup();
+});
+
+const FULL_GAME_SEED = 1;
 afterAll(() => colyseus.shutdown());
 
 async function createRoom(name: string) {
@@ -90,6 +95,8 @@ describe("MonopolyDealRoom", () => {
   });
 
   it("plays a full game with a bot, asking clients to respond during others' turns", async () => {
+    // A fixed deal in which the bot charges the humans, so they must answer during its turn.
+    GameRoom.seedForTests = () => FULL_GAME_SEED;
     const ana = await createRoom("Ana");
     const ben = await joinRoom(ana.latest().code, "Ben");
     const outOfTurn = { count: 0 };
@@ -107,5 +114,6 @@ describe("MonopolyDealRoom", () => {
     expect(b.result).toEqual(a.result);
     // Rent, debts and steals ask the targeted client to pay or respond out of turn.
     expect(outOfTurn.count).toBeGreaterThan(0);
+    GameRoom.seedForTests = null;
   }, 90_000);
 });

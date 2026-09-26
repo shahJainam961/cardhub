@@ -185,3 +185,18 @@ export function DealCardView({
     </motion.button>
   );
 }
+
+/** The back of a Monopoly Deal card. */
+export function DealCardBack({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`relative flex h-28 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-[2.5px] border-ink bg-ink shadow-[2px_3px_0_var(--color-ink)] ${className}`}
+      aria-hidden
+    >
+      <span className="absolute inset-1 rounded-[inherit] border-2 border-dashed border-white/25" />
+      <span className="flex h-[62%] w-[80%] -rotate-[22deg] items-center justify-center rounded-[50%] border-2 border-white bg-gradient-to-br from-mint to-sky">
+        <span className="rotate-[22deg] font-display text-sm font-bold text-ink">DEAL</span>
+      </span>
+    </div>
+  );
+}

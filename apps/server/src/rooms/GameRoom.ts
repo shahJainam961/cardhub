@@ -58,6 +58,12 @@ export abstract class GameRoom<State, Move, View, Options> extends Room {
   /** Overridable in tests. */
   static config: ServerConfig = readConfig();
 
+  /**
+   * Test hook for reproducible deals. Only server-side test code may set it: letting clients pick
+   * the seed would let them predict the deck.
+   */
+  static seedForTests: (() => number) | null = null;
+
   protected abstract readonly game: OnlineGame<State, Move, View, Options>;
 
   private seats: OnlineSeat[] = [];
@@ -218,7 +224,7 @@ export abstract class GameRoom<State, Move, View, Options> extends Room {
     if (this.seats.length < definition.minPlayers) {
       throw new InvalidMoveError(`add at least ${definition.minPlayers} players`);
     }
-    this.seed = randomInt(2 ** 32);
+    this.seed = (this.constructor as typeof GameRoom).seedForTests?.() ?? randomInt(2 ** 32);
     this.gameState = startGame(definition, {
       players: this.seats.map((s) => s.id),
       options: this.options,

@@ -42,7 +42,7 @@ test("a guest links an email, keeps their account, and can sign in on another de
   const save = page.getByRole("region", { name: "Save your progress" });
   await save.getByLabel("Email").fill(email);
   await save.getByRole("button", { name: "Send code" }).click();
-  await save.getByLabel(/6-digit code/).fill(await waitForCode(email, 0));
+  await save.getByLabel(/6-digit code/).fill(await waitForCode(email, "link"));
   await save.getByRole("button", { name: "Confirm code" }).click();
 
   await expect(page.getByTestId("account-email")).toHaveText(email);
@@ -58,7 +58,7 @@ test("a guest links an email, keeps their account, and can sign in on another de
   const signIn = other.getByRole("region", { name: "Already have an account?" });
   await signIn.getByLabel("Email").fill(email);
   await signIn.getByRole("button", { name: "Send sign-in code" }).click();
-  await signIn.getByLabel(/6-digit code/).fill(await waitForCode(email, 1));
+  await signIn.getByLabel(/6-digit code/).fill(await waitForCode(email, "signIn"));
   await signIn.getByRole("button", { name: "Confirm code" }).click();
 
   await expect(other.getByLabel("Display name")).toHaveValue(name);
@@ -72,7 +72,7 @@ test("a wrong code shows a helpful error", async ({ page }) => {
   const save = page.getByRole("region", { name: "Save your progress" });
   await save.getByLabel("Email").fill(email);
   await save.getByRole("button", { name: "Send code" }).click();
-  await waitForCode(email, 0);
+  await waitForCode(email, "link");
   await save.getByLabel(/6-digit code/).fill("000000");
   await save.getByRole("button", { name: "Confirm code" }).click();
   await expect(page.getByRole("alert")).toContainText(/wrong or has expired/);
@@ -84,7 +84,7 @@ test("signing out of a saved account starts a fresh guest", async ({ page }) => 
   const save = page.getByRole("region", { name: "Save your progress" });
   await save.getByLabel("Email").fill(email);
   await save.getByRole("button", { name: "Send code" }).click();
-  await save.getByLabel(/6-digit code/).fill(await waitForCode(email, 0));
+  await save.getByLabel(/6-digit code/).fill(await waitForCode(email, "link"));
   await save.getByRole("button", { name: "Confirm code" }).click();
   await expect(page.getByTestId("account-email")).toHaveText(email);
 

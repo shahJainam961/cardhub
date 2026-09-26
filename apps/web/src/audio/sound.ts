@@ -17,6 +17,8 @@ export type SoundName =
   | "lose"
   | "turn"
   | "pop"
+  | "nope"
+  | "setComplete"
   | "error";
 
 let ctx: AudioContext | null = null;
@@ -130,6 +132,17 @@ const SOUNDS: Record<SoundName, () => void> = {
   },
   pop: () => tone(NOTE(9), { duration: 0.08, volume: 0.35, slideTo: NOTE(14) }),
   error: () => tone(140, { duration: 0.18, type: "sawtooth", volume: 0.2 }),
+  /** Just Say No: a firm "nuh-uh" of two falling notes. */
+  nope: () => {
+    tone(NOTE(5), { duration: 0.16, type: "square", volume: 0.35 });
+    tone(NOTE(-2), { at: 0.17, duration: 0.3, type: "square", volume: 0.35 });
+  },
+  setComplete: () => {
+    [0, 4, 7, 11, 12].forEach((n, i) =>
+      tone(NOTE(n), { at: i * 0.06, duration: 0.22, type: "triangle", volume: 0.4 }),
+    );
+    noise({ at: 0.3, freq: 6000, duration: 0.12, volume: 0.25 });
+  },
 };
 
 const VIBRATION: Partial<Record<SoundName, number | number[]>> = {
@@ -137,6 +150,8 @@ const VIBRATION: Partial<Record<SoundName, number | number[]>> = {
   steal: 60,
   win: [60, 60, 60, 60, 160],
   turn: 25,
+  nope: [50, 40, 50],
+  setComplete: [30, 30, 60],
   error: 30,
 };
 
